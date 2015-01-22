@@ -11,7 +11,6 @@ from bs4 import BeautifulSoup as bsoup
 from os import getcwd, makedirs
 from os.path import isdir, join
 from requests import session
-#from sys.stdout import flush, write
 
 current_username = ''
 current_balance = 0
@@ -65,10 +64,6 @@ def login(username='plasticgum',password=''):
     except PoxNoraMaintenanceError as e:
         raise
 
-    # write the login page to a file
-    #login_pretty_file = open('prettylogin.html','w')
-    #login_pretty_file.write(login_soup.prettify())
-
     # generate post data payload
     payload = {
         'username': username,
@@ -92,8 +87,6 @@ def login(username='plasticgum',password=''):
 def fetchforge():
     # fetches forge data with session c (requires logged in)
     fetchforge_request = c.get(constants.POXNORA_URL + constants.FETCHFORGE_URL.format(str(int(time.time()))))
-    #fetchforge_file = open('fetchforge.data','w')
-    #json.dump(fetchforge_request.json(),fetchforge_file)
     return fetchforge_request.json()
     
 def parseforge(forgedata):
@@ -178,73 +171,7 @@ def update_datafiles(raw_champs,raw_spells,raw_relics,raw_equipments):
     do_fetch(s_data,'spell',constants.SPELL_TYPE)
     do_fetch(r_data,'relic',constants.RELIC_TYPE)
     do_fetch(e_data,'equipment',constants.EQUIPMENT_TYPE)
-    """
-    c_total = len(c_data.index)
-    c_in = []
-    c_out = []
-    for index, row in c_data.iterrows():
-        try:
-            sys.stdout.write('Fetching champion {0:0>4d}/{1:0>4d}\r'.format(index+1,c_total))
-            sys.stdout.flush()
-            nora_values = get_nora_values(row['baseId'],constants.CHAMPION_TYPE)
-        except PoxNoraMaintenanceError:
-            raise
-        c_in.append(nora_values[0])
-        c_out.append(nora_values[1])
-    c_data['in'] = c_in
-    c_data['out'] = c_out
-    """
 
-    """
-    s_total = len(s_data.index)
-    s_in = []
-    s_out = []
-    for index, row in s_data.iterrows():
-        try:
-            sys.stdout.write('Fetching spell {0:0>4d}/{1:0>4d}\r'.format(index+1,s_total))
-            sys.stdout.flush()
-            nora_values = get_nora_values(row['baseId'],constants.SPELL_TYPE)
-        except PoxNoraMaintenanceError:
-            raise
-        s_in.append(nora_values[0])
-        s_out.append(nora_values[1])
-    s_data['in'] = s_in
-    s_data['out'] = s_out
-    """
-
-    """
-    r_total = len(r_data.index)
-    r_in = []
-    r_out = []
-    for index, row in r_data.iterrows():
-        try:
-            sys.stdout.write('Fetching relic {0:0>4d}/{1:0>4d}\r'.format(index+1,r_total))
-            sys.stdout.flush()
-            nora_values = get_nora_values(row['baseId'],constants.RELIC_TYPE)
-        except PoxNoraMaintenanceError:
-            raise
-        r_in.append(nora_values[0])
-        r_out.append(nora_values[1])
-    r_data['in'] = r_in
-    r_data['out'] = r_out
-    """
-
-    """
-    e_total = len(e_data.index)
-    e_in = []
-    e_out = []
-    for index, row in e_data.iterrows():
-        try:
-            sys.stdout.write('Fetching equipment {0:0>4d}/{1:0>4d}\r'.format(index+1,e_total))
-            sys.stdout.flush()
-            nora_values = get_nora_values(row['baseId'],constants.EQUIPMENT_TYPE)
-        except PoxNoraMaintenanceError:
-            raise
-        e_in.append(nora_values[0])
-        e_out.append(nora_values[1])
-    e_data['in'] = e_in
-    e_data['out'] = e_out
-    """
     # pickle dataframes
     data_directory = get_data_directory()
     print constants.WRITING_DATA_FILES_NOTIF

@@ -15,10 +15,13 @@ from requests import session
 current_username = ''
 current_balance = 0
 
+# these data frames hold rune data in memory
 c_data = pd.DataFrame()
 s_data = pd.DataFrame()
 r_data = pd.DataFrame()
 e_data = pd.DataFrame()
+
+# these data frames hold personal collection data in memory
 p_c_data = pd.DataFrame()
 p_s_data = pd.DataFrame()
 p_r_data = pd.DataFrame()
@@ -36,6 +39,9 @@ class PoxNoraMaintenanceError(Exception):
 # --- HELPER FUNCTIONS --- #
 
 def get_data_directory():
+    """Generates a path string for data files and ensures it exists.
+
+    """
     # determine path for data directory
     data_directory = join(getcwd(),constants.DATA_DIR)
     # create directory if it does not exist
@@ -64,18 +70,18 @@ def login(username='plasticgum',password=''):
     except PoxNoraMaintenanceError as e:
         raise
 
-    # generate post data payload
-    payload = {
-        'username': username,
-        'password': password,
-    }
-
     # find the first instance of an element named LOGINFORM_NAME
     login_form = login_soup.find(attrs={'name': constants.LOGINFORM_NAME,})
 
     # find the hidden element (we are only expecting one)
     login_form_hidden = login_form.find(attrs={'type': 'hidden',})
-    # update the login payload by including this hidden field
+
+    # generate post data payload
+    payload = {
+        'username': username,
+        'password': password,
+    }
+    # update the login payload by including the hidden field
     payload.update({login_form_hidden['name'].encode('ascii','ignore'):login_form_hidden['value'].encode('ascii','ignore')})
     # do login
     c.post(constants.POXNORA_URL + constants.LOGINDO_URL, data=payload)
@@ -84,24 +90,26 @@ def login(username='plasticgum',password=''):
     global current_username
     current_username = username
 
-def fetchforge():
+def query_forge():
+    """Queries the Pox Nora website and extracts raw data from the Rune Forge page.
+
+    """
     # fetches forge data with session c (requires logged in)
-    fetchforge_request = c.get(constants.POXNORA_URL + constants.FETCHFORGE_URL.format(str(int(time.time()))))
-    return fetchforge_request.json()
-    
-def parseforge(forgedata):
+    query_forge_request = c.get(constants.POXNORA_URL + constants.FETCHFORGE_URL.format(str(int(time.time()))))
+    # convert json to dict
+    forge_data = query_forge_request.json()
     # convert dictionary to separate dataframes
-    if len(forgedata) < 1:
+    if len(forge_data) < 1:
         print constants.RUNE_DATA_NOT_FOUND_ERROR
         return (None,None,None,None)
     global current_balance
-    current_balance = int(forgedata['balance'])
-    return (pd.DataFrame.from_dict(forgedata['champions']),
-            pd.DataFrame.from_dict(forgedata['spells']),
-            pd.DataFrame.from_dict(forgedata['relics']),
-            pd.DataFrame.from_dict(forgedata['equipment']))
+    current_balance = int(forge_data['balance'])
+    return (pd.DataFrame.from_dict(forge_data['champions']),
+            pd.DataFrame.from_dict(forge_data['spells']),
+            pd.DataFrame.from_dict(forge_data['relics']),
+            pd.DataFrame.from_dict(forge_data['equipment']))
 
-def get_nora_values(id,t):
+def query_nora_values(id,t):
     """Return the nora values of a specific rune.
 
     Args:
@@ -117,30 +125,49 @@ def get_nora_values(id,t):
             due to maintenance.
     """
     request_string = constants.POXNORA_URL + constants.LAUNCHFORGE_URL.format(str(id),t)
-    noravalues_request = c.get(request_string)
+    nora_values_request = c.get(request_string)
     try:
-        noravalues_soup = parse_poxnora_page(noravalues_request.text)
+        nora_values_soup = parse_poxnora_page(nora_values_request.text)
     except PoxNoraMaintenanceError as e:
         raise
     nora_values = []
-    for item in noravalues_soup.find(id=constants.FORGEACTION_NAME).find_all(attrs={'class':constants.NORAVALUE_NAME,}):
+    for item in nora_values_soup.find(id=constants.FORGEACTION_NAME).find_all(attrs={'class':constants.NORAVALUE_NAME,}):
         nora_values.append(int(item.text))
     return (nora_values[0],nora_values[2])
 
-def update_full():
-    forgedata = fetchforge()
-    (raw_champs,raw_spells,raw_relics,raw_equipments) = parseforge(forgedata)
+def fetch_data(update_data_param=False,update_p_data_param=False):
+    """
+    Fetch specific data frames by querying Pox Nora website.
+
+    Args:
+        update_data_param (bool): Whether *_data should be updated.
+        update_p_data_param (bool): Whether p_*_data should be updated.
+
+    Returns:
+        None: global data frames will be updated on successful execution.
+
+    """
+    if not update_data_param and not update_p_data_param:
+        # made a useless call
+        return
+    (raw_champs,raw_spells,raw_relics,raw_equipments) = query_forge()
     if raw_champs is not None and raw_spells is not None and raw_relics is not None and raw_equipments is not None:
-        print constants.PERFORMING_FULL_UPDATE_NOTIF
-        try:
-            update_datafiles(raw_champs,raw_spells,raw_relics,raw_equipments)
-            update_p_datafiles(raw_champs,raw_spells,raw_relics,raw_equipments)
-        except PoxNoraMaintenanceError as e:
-            print e.message
+        if update_data_param:
+            print constants.PERFORMING_DATA_UPDATE_NOTIF
+            try:
+                parse_data(raw_champs,raw_spells,raw_relics,raw_equipments)
+            except PoxNoraMaintenanceError as e:
+                raise
+        if update_p_data_param:
+            print constants.PERFORMING_P_DATA_UPDATE_NOTIF
+            try:
+                update_p_datafiles(raw_champs,raw_spells,raw_relics,raw_equipments)
+            except PoxNoraMaintenanceError as e:
+                raise
     else:
         print constants.PARSE_FORGE_ERROR
 
-def do_fetch(data, name, t):
+def query_nora_values_batch(data, name, t):
     total = len(data.index)
     my_in = []
     my_out = []
@@ -148,7 +175,7 @@ def do_fetch(data, name, t):
         try:
             sys.stdout.write(constants.FETCHING_RUNE_NOTIF.format(name,index+1,total))
             sys.stdout.flush()
-            (this_in, this_out) = get_nora_values(row['baseId'],t)
+            (this_in, this_out) = query_nora_values(row['baseId'],t)
         except PoxNoraMaintenanceError:
             raise
         my_in.append(this_in)
@@ -157,7 +184,7 @@ def do_fetch(data, name, t):
     data['in'] = my_in
     data['out'] = my_out
 
-def update_datafiles(raw_champs,raw_spells,raw_relics,raw_equipments):
+def parse_data(raw_champs,raw_spells,raw_relics,raw_equipments):
     # update global data files, assuming recently updated local variables
     # setup references to global variables
     global c_data, s_data, r_data, e_data
@@ -167,10 +194,10 @@ def update_datafiles(raw_champs,raw_spells,raw_relics,raw_equipments):
     r_data[constants.S_DATA_COLUMNS] = raw_relics[constants.S_DATA_COLUMNS]
     e_data[constants.S_DATA_COLUMNS] = raw_equipments[constants.S_DATA_COLUMNS]
     
-    do_fetch(c_data,'champion',constants.CHAMPION_TYPE)
-    do_fetch(s_data,'spell',constants.SPELL_TYPE)
-    do_fetch(r_data,'relic',constants.RELIC_TYPE)
-    do_fetch(e_data,'equipment',constants.EQUIPMENT_TYPE)
+    query_nora_values_batch(c_data,'champion',constants.CHAMPION_TYPE)
+    query_nora_values_batch(s_data,'spell',constants.SPELL_TYPE)
+    query_nora_values_batch(r_data,'relic',constants.RELIC_TYPE)
+    query_nora_values_batch(e_data,'equipment',constants.EQUIPMENT_TYPE)
 
     # pickle dataframes
     data_directory = get_data_directory()
@@ -188,8 +215,8 @@ def update_datafiles(raw_champs,raw_spells,raw_relics,raw_equipments):
         # couldn't open files
         print constants.DATA_FILES_WRITE_ERROR
 
-def read_datafiles():
-    # read datafiles into current variables
+def read_data():
+    # read data files into *_data memory
     data_directory = get_data_directory()
     global c_data, s_data, r_data, e_data
     try:
@@ -244,6 +271,44 @@ def read_p_datafiles():
     except IOError:
         # could not open files
         print constants.DATA_FILES_READ_ERROR
+        raise
+
+def refresh_data():
+    # load *_data into memory, regardless of current status
+    # try to read it from the file first
+    try:
+        read_data()
+    except IOError:
+        # loading from files failed
+        try:
+            fetch_data(False,True) # update personal collection only
+        except PoxNoraMaintenanceError:
+            raise
+
+def refresh_p_data():
+    # load p_*_data into memory, regardless of current status
+    # try to read it from the file first
+    try:
+        read_p_datafiles()
+    except IOError:
+        # loading from files failed
+        try:
+            fetch_data(False,True) # update personal collection only
+        except PoxNoraMaintenanceError:
+            raise
+
+def load_p_data():
+    # smart load of p_*_data into memory
+    if len(p_c_data.index) > 0 and len(p_c_data.index) > 0 and len(p_c_data.index) > 0 and len(p_c_data.index) > 0:
+        # data is already loaded
+        return
+    refresh_p_data()
+
+
+def calculate_net_worth():
+    # calculate the net worth of this account assuming we trade in all excess runes
+    load_p_data()
+
 
 c = session()
 try:

@@ -37,6 +37,8 @@ POXNORA_MAINTENANCE_ERROR = 'Pox Nora website is currently down for maintenance.
 RUNE_DATA_NOT_FOUND_ERROR = 'Rune data was not properly initialized.'
 
 FETCHING_RUNE_NOTIF = 'Fetching {0} {1:0>4d}/{2:0>4d}\r'
-PERFORMING_FULL_UPDATE_NOTIF = 'Performing full update of rune data and personal collection...'
+PERFORMING_DATA_UPDATE_NOTIF = 'Updating rune data...'
+PERFORMING_FULL_UPDATE_NOTIF = 'Updating rune data and personal collection...'
+PERFORMING_P_DATA_UPDATE_NOTIF = 'Updating personal collection...'
 WRITING_DATA_FILES_NOTIF = 'Writing rune data files...'
 WRITING_P_DATA_FILES_NOTIF = 'Writing personal data files...'

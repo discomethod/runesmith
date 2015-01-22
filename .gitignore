@@ -2,6 +2,7 @@
 *_s.data
 *_r.data
 *_e.data
+.idea/
 
 # --- DEFAULT PYTHON .GITIGNORE --- #
 

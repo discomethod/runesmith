@@ -1,3 +1,10 @@
+*_c.data
+*_s.data
+*_r.data
+*_e.data
+
+# --- DEFAULT PYTHON .GITIGNORE --- #
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -30,7 +30,7 @@ p_e_data = pd.DataFrame()
 class PoxNoraMaintenanceError(Exception):
     def __init__(self, *args):
         self.args = [a for a in args]
-        self.message = 'Pox Nora website is currently down for maintenance.'
+        self.message = constants.POXNORA_MAINTENANCE_ERROR
 
 # --- END EXCEPTIONS --- #
 
@@ -49,6 +49,7 @@ def get_data_directory():
 
 def parse_poxnora_page(html):
     parse = bsoup(html)
+    # some returned pages have no <title> tag
     if parse.title is not None and 'MAINTENANCE' in parse.title.string.encode('ascii','ignore').upper():
         raise PoxNoraMaintenanceError
     return parse

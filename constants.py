@@ -33,6 +33,7 @@ P_S_DATA_COLUMNS = ['baseId','count',] # column names to copy for personal spell
 DATA_FILES_READ_ERROR = 'Could not find saved data files.'
 DATA_FILES_WRITE_ERROR = 'Could not open data files for write.'
 PARSE_FORGE_ERROR = 'Could not obtain collection data.'
+POXNORA_MAINTENANCE_ERROR = 'Pox Nora website is currently down for maintenance.'
 RUNE_DATA_NOT_FOUND_ERROR = 'Rune data was not properly initialized.'
 
 FETCHING_RUNE_NOTIF = 'Fetching {0} {1:0>4d}/{2:0>4d}\r'

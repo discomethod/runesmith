@@ -61,7 +61,7 @@ def parse_poxnora_page(html):
 
 # --- END HELPER FUNCTIONS --- #
 
-def login(username='plasticgum',password=''):
+def do_login(username='plasticgum',password=''):
     # make a request to the login screen
     login_request = c.get(constants.POXNORA_URL + constants.LOGIN_URL)
     # parse the login request as html
@@ -86,7 +86,7 @@ def login(username='plasticgum',password=''):
     # do login
     c.post(constants.POXNORA_URL + constants.LOGINDO_URL, data=payload)
 
-    # TODO check if login request worked
+    # TODO check if do_login request worked
     global current_username
     current_username = username
 
@@ -144,28 +144,30 @@ def fetch_data(update_data_param=False,update_p_data_param=False):
         update_p_data_param (bool): Whether p_*_data should be updated.
 
     Returns:
-        None: global data frames will be updated on successful execution.
+        bool: True if any updates were made, False is otherwise
 
     """
     if not update_data_param and not update_p_data_param:
         # made a useless call
-        return
+        return False
     (raw_champs,raw_spells,raw_relics,raw_equipments) = query_forge()
     if raw_champs is not None and raw_spells is not None and raw_relics is not None and raw_equipments is not None:
         if update_data_param:
             print constants.PERFORMING_DATA_UPDATE_NOTIF
             try:
-                parse_data(raw_champs,raw_spells,raw_relics,raw_equipments)
+                update_data_from_raw(raw_champs,raw_spells,raw_relics,raw_equipments)
             except PoxNoraMaintenanceError as e:
                 raise
         if update_p_data_param:
             print constants.PERFORMING_P_DATA_UPDATE_NOTIF
             try:
-                update_p_datafiles(raw_champs,raw_spells,raw_relics,raw_equipments)
+                update_p_data_from_raw(raw_champs,raw_spells,raw_relics,raw_equipments)
             except PoxNoraMaintenanceError as e:
                 raise
+        return True
     else:
         print constants.PARSE_FORGE_ERROR
+        return False
 
 def query_nora_values_batch(data, name, t):
     total = len(data.index)
@@ -184,7 +186,7 @@ def query_nora_values_batch(data, name, t):
     data['in'] = my_in
     data['out'] = my_out
 
-def parse_data(raw_champs,raw_spells,raw_relics,raw_equipments):
+def update_data_from_raw(raw_champs,raw_spells,raw_relics,raw_equipments):
     # update global data files, assuming recently updated local variables
     # setup references to global variables
     global c_data, s_data, r_data, e_data
@@ -199,6 +201,8 @@ def parse_data(raw_champs,raw_spells,raw_relics,raw_equipments):
     query_nora_values_batch(r_data,'relic',constants.RELIC_TYPE)
     query_nora_values_batch(e_data,'equipment',constants.EQUIPMENT_TYPE)
 
+def save_data_to_file():
+    global c_data, s_data, r_data, e_data
     # pickle dataframes
     data_directory = get_data_directory()
     print constants.WRITING_DATA_FILES_NOTIF
@@ -215,7 +219,7 @@ def parse_data(raw_champs,raw_spells,raw_relics,raw_equipments):
         # couldn't open files
         print constants.DATA_FILES_WRITE_ERROR
 
-def read_data():
+def load_data_from_file():
     # read data files into *_data memory
     data_directory = get_data_directory()
     global c_data, s_data, r_data, e_data
@@ -232,13 +236,17 @@ def read_data():
         # could not open files
         print constants.DATA_FILES_READ_ERROR
 
-def update_p_datafiles(raw_champs,raw_spells,raw_relics,raw_equipments):
-    # update player data files
+def update_p_data_from_raw(raw_champs,raw_spells,raw_relics,raw_equipments):
+    # update player data files from the raw files
     global p_c_data, p_s_data, p_r_data, p_e_data
     p_c_data[constants.P_C_DATA_COLUMNS] = raw_champs[constants.P_C_DATA_COLUMNS]
     p_s_data[constants.P_S_DATA_COLUMNS] = raw_spells[constants.P_S_DATA_COLUMNS]
     p_r_data[constants.P_S_DATA_COLUMNS] = raw_relics[constants.P_S_DATA_COLUMNS]
     p_e_data[constants.P_S_DATA_COLUMNS] = raw_equipments[constants.P_S_DATA_COLUMNS]
+
+def save_p_data_to_file():
+    # update player data files
+    global p_c_data, p_s_data, p_r_data, p_e_data
     # pickle dataframes
     data_directory = get_data_directory()
     print constants.WRITING_P_DATA_FILES_NOTIF
@@ -255,7 +263,8 @@ def update_p_datafiles(raw_champs,raw_spells,raw_relics,raw_equipments):
         # couldn't open files
         print constants.DATA_FILES_WRITE_ERROR
 
-def read_p_datafiles():
+
+def load_p_data_from_file():
     # read datafiles into current variables
     data_directory = get_data_directory()
     global p_c_data, p_s_data, p_r_data, p_e_data
@@ -277,7 +286,7 @@ def refresh_data():
     # load *_data into memory, regardless of current status
     # try to read it from the file first
     try:
-        read_data()
+        load_data_from_file()
     except IOError:
         # loading from files failed
         try:
@@ -289,7 +298,7 @@ def refresh_p_data():
     # load p_*_data into memory, regardless of current status
     # try to read it from the file first
     try:
-        read_p_datafiles()
+        load_p_data_from_file()
     except IOError:
         # loading from files failed
         try:
@@ -297,9 +306,16 @@ def refresh_p_data():
         except PoxNoraMaintenanceError:
             raise
 
+def load_data():
+    # smart load of *_data into memory
+    if len(c_data.index) > 0 and len(s_data.index) > 0 and len(r_data.index) > 0 and len(e_data.index) > 0:
+        # data is already loaded
+        return
+    refresh_data()
+
 def load_p_data():
     # smart load of p_*_data into memory
-    if len(p_c_data.index) > 0 and len(p_c_data.index) > 0 and len(p_c_data.index) > 0 and len(p_c_data.index) > 0:
+    if len(p_c_data.index) > 0 and len(p_s_data.index) > 0 and len(p_r_data.index) > 0 and len(p_e_data.index) > 0:
         # data is already loaded
         return
     refresh_p_data()
@@ -307,11 +323,12 @@ def load_p_data():
 
 def calculate_net_worth():
     # calculate the net worth of this account assuming we trade in all excess runes
+    load_data()
     load_p_data()
-
+    
 
 c = session()
 try:
-    login()
+    do_login()
 except PoxNoraMaintenanceError as e:
     print e.message

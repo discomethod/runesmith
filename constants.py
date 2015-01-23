@@ -1,44 +1,44 @@
 POXNORA_URL = 'https://www.poxnora.com'
 
-FETCHFORGE_URL = '/runes/load-forge.do?m=forge&_={0}' # url for fetching the forge page
-LAUNCHFORGE_URL = '/runes/launch-forge.do?m=forge&i={0}&t={1}' # url for fetching rune data
-LOGIN_URL = '/security/login.do' # url for the login display page
-LOGINDO_URL = '/security/dologin.do' # url for submitting login form
+URL_FETCHFORGE = '/runes/load-forge.do?m=forge&_={0}' # url for fetching the forge page
+URL_LAUNCHFORGE = '/runes/launch-forge.do?m=forge&i={0}&t={1}' # url for fetching rune data
+URL_LOGIN = '/security/login.do' # url for the login display page
+URL_LOGINDO = '/security/dologin.do' # url for submitting login form
 
-LOGINFORM_NAME = 'loginForm' # name of login form element
-FORGEACTION_NAME = 'forge-action' # name of div containing nora worth values
-NORAVALUE_NAME = 'nora-value' # name of class of each nora worth value element
+NAME_LOGINFORM = 'loginForm' # name of login form element
+NAME_FORGEACTION = 'forge-action' # name of div containing nora worth values
+NAME_NORAVALUE = 'nora-value' # name of class of each nora worth value element
 
-DATA_DIR = 'data' # directory name to store data in
+DIR_DATA = 'data' # directory name to store data in
 
-C_DATA_FILE = 'globalc.data'
-S_DATA_FILE = 'globals.data'
-R_DATA_FILE = 'globalr.data'
-E_DATA_FILE = 'globale.data'
-P_C_DATA_FILE = '{0}_c.data'
-P_S_DATA_FILE = '{0}_s.data'
-P_R_DATA_FILE = '{0}_r.data'
-P_E_DATA_FILE = '{0}_e.data'
+FILE_C_DATA = 'globalc.data'
+FILE_S_DATA = 'globals.data'
+FILE_R_DATA = 'globalr.data'
+FILE_E_DATA = 'globale.data'
+FILE_P_C_DATA = '{0}_c.data'
+FILE_P_S_DATA = '{0}_s.data'
+FILE_P_R_DATA = '{0}_r.data'
+FILE_P_E_DATA = '{0}_e.data'
 
-CHAMPION_TYPE = 'c'
-SPELL_TYPE = 's'
-RELIC_TYPE = 'r'
-EQUIPMENT_TYPE = 'e'
+TYPE_CHAMPION = 'c'
+TYPE_SPELL = 's'
+TYPE_RELIC = 'r'
+TYPE_EQUIPMENT = 'e'
 
-C_DATA_COLUMNS = ['baseId','clazzes','factions','name','races','rarity','release',] # column names to copy into champions data
-S_DATA_COLUMNS = ['baseId','factions','name','rarity','release',] # column names to copy in spells, relics, and equipments data
-P_C_DATA_COLUMNS = ['baseId','count',] # column names to copy for personal champions
-P_S_DATA_COLUMNS = ['baseId','count',] # column names to copy for personal spells, relics, and equipment
+COLUMNS_C_DATA = ['baseId','clazzes','factions','name','races','rarity','release',] # column names to copy into champions data
+COLUMNS_S_DATA = ['baseId','factions','name','rarity','release',] # column names to copy in spells, relics, and equipments data
+COLUMNS_P_C_DATA = ['baseId','count',] # column names to copy for personal champions
+COLUMNS_P_S_DATA = ['baseId','count',] # column names to copy for personal spells, relics, and equipment
 
-DATA_FILES_READ_ERROR = 'Could not find saved data files.'
-DATA_FILES_WRITE_ERROR = 'Could not open data files for write.'
-PARSE_FORGE_ERROR = 'Could not obtain collection data.'
-POXNORA_MAINTENANCE_ERROR = 'Pox Nora website is currently down for maintenance.'
-RUNE_DATA_NOT_FOUND_ERROR = 'Rune data was not properly initialized.'
+ERROR_DATA_FILES_READ = 'Could not find saved data files.'
+ERROR_DATA_FILES_WRITE = 'Could not open data files for write.'
+ERROR_PARSE_FORGE = 'Could not obtain collection data.'
+ERROR_POXNORA_MAINTENANCE = 'Pox Nora website is currently down for maintenance.'
+ERROR_RUNE_DATA_NOT_FOUND = 'Rune data was not properly initialized.'
 
-FETCHING_RUNE_NOTIF = 'Fetching {0} {1:0>4d}/{2:0>4d}\r'
-PERFORMING_DATA_UPDATE_NOTIF = 'Updating rune data...'
-PERFORMING_FULL_UPDATE_NOTIF = 'Updating rune data and personal collection...'
-PERFORMING_P_DATA_UPDATE_NOTIF = 'Updating personal collection...'
-WRITING_DATA_FILES_NOTIF = 'Writing rune data files...'
-WRITING_P_DATA_FILES_NOTIF = 'Writing personal data files...'
+NOTIF_FETCHING_RUNE = 'Fetching {0} {1:0>4d}/{2:0>4d}\r'
+NOTIF_PERFORMING_DATA_UPDATE = 'Updating rune data...'
+NOTIF_PERFORMING_FULL_UPDATE = 'Updating rune data and personal collection...'
+NOTIF_PERFORMING_P_DATA_UPDATE = 'Updating personal collection...'
+NOTIF_WRITING_DATA_FILES = 'Writing rune data files...'
+NOTIF_WRITING_P_DATA_FILES = 'Writing personal data files...'

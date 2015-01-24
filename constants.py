@@ -33,6 +33,7 @@ COLUMNS_P_S_DATA = ['baseId','count',] # column names to copy for personal spell
 
 ERROR_DATA_FILES_READ = 'Could not find saved data files.'
 ERROR_DATA_FILES_WRITE = 'Could not open data files for write.'
+ERROR_FILE_PERMISSION_DENIED = 'Could not open file - permission denied. Check that it is not in use by another program.'
 ERROR_PARSE_FORGE = 'Could not obtain collection data.'
 ERROR_POXNORA_MAINTENANCE = 'Pox Nora website is currently down for maintenance.'
 ERROR_RARITY_UNDEFINED = 'Could not determine the rarity of the rune. Please submit an error report.'

@@ -423,7 +423,7 @@ def load_p_keep():
         return
     refresh_p_keep()
 
-def calculate_net_worth():
+def calculate_net_worth(mult_factor=1,add_factor=0):
     # calculate the net worth of this account assuming we trade in all excess runes
     load_data()
     load_p_data()
@@ -432,7 +432,16 @@ def calculate_net_worth():
                              pd.merge(s_data, p_s_data, on=['baseId','runetype'], sort=False),
                              pd.merge(r_data, p_r_data, on=['baseId','runetype'], sort=False),
                              pd.merge(e_data, p_e_data, on=['baseId','runetype'], sort=False),]), on =['baseId','runetype'], sort=False)
-    merged_data['worth'] = np.maximum(np.zeros(len(merged_data.index)),merged_data['in'] * (merged_data['count']-merged_data['keep']))
+    merged_data['worth'] = np.maximum(np.zeros(len(merged_data.index)),merged_data['in'] * (merged_data['count']-(merged_data['keep']*mult_factor+add_factor)))
+    if mult_factor is 1 and add_factor is 0:
+        # only print out the CSV for unmodified keep values
+        with open('{0}_networth.csv'.format(current_username),'w') as f:
+            try:
+                for index, row in merged_data.iterrows():
+                    f.write('"{0}",{1},{2},{3},{4}\n'.format(row['name'],row['in'],row['out'],row['count'],row['worth']))
+            except IOError as e:
+                print e.errno
+                raise
     return merged_data
 
 c = session()

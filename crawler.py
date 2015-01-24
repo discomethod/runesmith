@@ -27,8 +27,9 @@ p_s_data = pd.DataFrame()
 p_r_data = pd.DataFrame()
 p_e_data = pd.DataFrame()
 
-# this data frame stores the player's preferences
-p_preferences = pd.DataFrame()
+# this data frame stores how many of each rune the player
+#   wants to keep
+p_keep = pd.DataFrame()
 
 # --- EXCEPTIONS --- #
 
@@ -36,6 +37,10 @@ class PoxNoraMaintenanceError(Exception):
     def __init__(self, *args):
         self.args = [a for a in args]
         self.message = constants.ERROR_POXNORA_MAINTENANCE
+
+class PoxNoraRarityUndefined(Exception):
+    def __init__(self):
+        self.message = constants.ERROR_RARITY_UNDEFINED
 
 # --- END EXCEPTIONS --- #
 
@@ -54,6 +59,20 @@ def get_data_directory():
         if e.errno is not errno.EEXIST:
             raise
     return data_directory
+
+def get_default_keep(rarity):
+    rarity = int(rarity)
+    if rarity is constants.VALUE_RARITY_COMMON:
+        return constants.VALUE_RARITY_COMMON_KEEP
+    if rarity is constants.VALUE_RARITY_UNCOMMON:
+        return constants.VALUE_RARITY_UNCOMMON_KEEP
+    if rarity is constants.VALUE_RARITY_RARE:
+        return constants.VALUE_RARITY_RARE_KEEP
+    if rarity is constants.VALUE_RARITY_EXOTIC:
+        return constants.VALUE_RARITY_EXOTIC_KEEP
+    if rarity is constants.VALUE_RARITY_LEGENDARY:
+        return constants.VALUE_RARITY_LEGENDARY_KEEP
+    raise PoxNoraRarityUndefined
 
 def parse_poxnora_page(html):
     parse = bsoup(html)
@@ -198,6 +217,10 @@ def update_data_from_raw(raw_champs,raw_spells,raw_relics,raw_equipments):
     s_data[constants.COLUMNS_S_DATA] = raw_spells[constants.COLUMNS_S_DATA]
     r_data[constants.COLUMNS_S_DATA] = raw_relics[constants.COLUMNS_S_DATA]
     e_data[constants.COLUMNS_S_DATA] = raw_equipments[constants.COLUMNS_S_DATA]
+    c_data['runetype'] = constants.TYPE_CHAMPION
+    s_data['runetype'] = constants.TYPE_SPELL
+    r_data['runetype'] = constants.TYPE_RELIC
+    e_data['runetype'] = constants.TYPE_EQUIPMENT
     
     query_nora_values_batch(c_data,'champion',constants.TYPE_CHAMPION)
     query_nora_values_batch(s_data,'spell',constants.TYPE_SPELL)
@@ -246,6 +269,10 @@ def update_p_data_from_raw(raw_champs,raw_spells,raw_relics,raw_equipments):
     p_s_data[constants.COLUMNS_P_S_DATA] = raw_spells[constants.COLUMNS_P_S_DATA]
     p_r_data[constants.COLUMNS_P_S_DATA] = raw_relics[constants.COLUMNS_P_S_DATA]
     p_e_data[constants.COLUMNS_P_S_DATA] = raw_equipments[constants.COLUMNS_P_S_DATA]
+    p_c_data['runetype'] = constants.TYPE_CHAMPION
+    p_s_data['runetype'] = constants.TYPE_SPELL
+    p_r_data['runetype'] = constants.TYPE_RELIC
+    p_e_data['runetype'] = constants.TYPE_EQUIPMENT
 
 def save_p_data_to_file():
     # update player data files
@@ -285,21 +312,27 @@ def load_p_data_from_file():
         print constants.ERROR_DATA_FILES_READ
         raise
 
-def save_p_preferences_to_file():
+def load_p_keep_from_file():
+    # read person preference files into memory
+    data_directory = get_data_directory()
+    global p_keep
+    try:
+        with open(join(data_directory,constants.FILE_P_KEEP.format(current_username)),'r') as f:
+            p_keep = pickle.load(f)
+    except IOError:
+        # could not open files
+        print constants.ERROR_DATA_FILES_READ
+        raise
+
+def save_p_keep_to_file():
     # save player preference files
-    global p_preferences
+    global p_keep
     # pickle dataframes
     data_directory = get_data_directory()
-    print constants.NOTIF_WRITING_P_DATA_FILES
+    print constants.NOTIF_WRITING_P_PREFERENCES_FILE
     try:
-        with open(join(data_directory,constants.FILE_P_C_DATA.format(current_username)),'w') as f:
-            pickle.dump(p_c_data,f)
-        with open(join(data_directory,constants.FILE_P_S_DATA.format(current_username)),'w') as f:
-            pickle.dump(p_s_data,f)
-        with open(join(data_directory,constants.FILE_P_R_DATA.format(current_username)),'w') as f:
-            pickle.dump(p_r_data,f)
-        with open(join(data_directory,constants.FILE_P_E_DATA.format(current_username)),'w') as f:
-            pickle.dump(p_e_data,f)
+        with open(join(data_directory,constants.FILE_P_KEEP.format(current_username)),'w') as f:
+            pickle.dump(p_keep,f)
     except IOError:
         # couldn't open files
         print constants.ERROR_DATA_FILES_WRITE
@@ -328,7 +361,46 @@ def refresh_p_data():
         except PoxNoraMaintenanceError:
             raise
 
+def refresh_p_keep():
+    # load p_keep into memory, regardless of current status
+    # try to read it from the file first
+    try:
+        load_p_keep_from_file()
+    except IOError:
+        # loading from files failed
+        # generate personal preferences from default
+        try:
+            load_data()
+        except PoxNoraMaintenanceError:
+            raise
+        todo_index = []
+        todo_keep = []
+        todo_type = []
+        global c_data, s_data, r_data, e_data
+        for index, row in c_data.iterrows():
+            todo_index.append(row['baseId'])
+            todo_keep.append(get_default_keep(row['rarity']))
+            todo_type.append(constants.TYPE_CHAMPION)
+        for index, row in s_data.iterrows():
+            todo_index.append(row['baseId'])
+            todo_keep.append(get_default_keep(row['rarity']))
+            todo_type.append(constants.TYPE_SPELL)
+        for index, row in r_data.iterrows():
+            todo_index.append(row['baseId'])
+            todo_keep.append(get_default_keep(row['rarity']))
+            todo_type.append(constants.TYPE_RELIC)
+        for index, row in e_data.iterrows():
+            todo_index.append(row['baseId'])
+            todo_keep.append(get_default_keep(row['rarity']))
+            todo_type.append(constants.TYPE_EQUIPMENT)
+        global p_keep
+        p_keep['baseId'] = todo_index
+        p_keep['keep'] = todo_keep
+        p_keep['runetype'] = todo_type
+        save_p_keep_to_file()
+
 def load_data():
+    global c_data, s_data, r_data, e_data
     # smart load of *_data into memory
     if len(c_data.index) > 0 and len(s_data.index) > 0 and len(r_data.index) > 0 and len(e_data.index) > 0:
         # data is already loaded
@@ -336,26 +408,31 @@ def load_data():
     refresh_data()
 
 def load_p_data():
+    global p_c_data, p_s_data, p_r_data, p_e_data
     # smart load of p_*_data into memory
     if len(p_c_data.index) > 0 and len(p_s_data.index) > 0 and len(p_r_data.index) > 0 and len(p_e_data.index) > 0:
         # data is already loaded
         return
     refresh_p_data()
 
+def load_p_keep():
+    # smart load of p_keep into memory
+    global p_keep
+    if len(p_keep) > 0:
+        # preferences are already loaded
+        return
+    refresh_p_keep()
 
 def calculate_net_worth():
     # calculate the net worth of this account assuming we trade in all excess runes
     load_data()
     load_p_data()
-    merged_data = pd.concat([pd.merge(c_data, p_c_data, on='baseId', sort=False),
-                             pd.merge(s_data, p_s_data, on='baseId', sort=False),
-                             pd.merge(r_data, p_r_data, on='baseId', sort=False),
-                             pd.merge(e_data, p_e_data, on='baseId', sort=False),], keys=['champions','spells','relics','equipments'])
-    merged_data['worth'] = np.maximum(np.zeros(len(merged_data.index)),merged_data['in'] * (merged_data['count']-2))
+    load_p_keep()
+    merged_data = pd.merge(p_keep,pd.concat([pd.merge(c_data, p_c_data, on=['baseId','runetype'], sort=False),
+                             pd.merge(s_data, p_s_data, on=['baseId','runetype'], sort=False),
+                             pd.merge(r_data, p_r_data, on=['baseId','runetype'], sort=False),
+                             pd.merge(e_data, p_e_data, on=['baseId','runetype'], sort=False),]), on =['baseId','runetype'], sort=False)
+    merged_data['worth'] = np.maximum(np.zeros(len(merged_data.index)),merged_data['in'] * (merged_data['count']-merged_data['keep']))
     return merged_data
 
 c = session()
-try:
-    do_login()
-except PoxNoraMaintenanceError as e:
-    print e.message

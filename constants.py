@@ -19,6 +19,7 @@ FILE_P_C_DATA = '{0}_c.data'
 FILE_P_S_DATA = '{0}_s.data'
 FILE_P_R_DATA = '{0}_r.data'
 FILE_P_E_DATA = '{0}_e.data'
+FILE_P_KEEP = '{}_keep.data'
 
 TYPE_CHAMPION = 'c'
 TYPE_SPELL = 's'
@@ -34,6 +35,7 @@ ERROR_DATA_FILES_READ = 'Could not find saved data files.'
 ERROR_DATA_FILES_WRITE = 'Could not open data files for write.'
 ERROR_PARSE_FORGE = 'Could not obtain collection data.'
 ERROR_POXNORA_MAINTENANCE = 'Pox Nora website is currently down for maintenance.'
+ERROR_RARITY_UNDEFINED = 'Could not determine the rarity of the rune. Please submit an error report.'
 ERROR_RUNE_DATA_NOT_FOUND = 'Rune data was not properly initialized.'
 
 NOTIF_FETCHING_RUNE = 'Fetching {0} {1:0>4d}/{2:0>4d}\r'
@@ -42,3 +44,15 @@ NOTIF_PERFORMING_FULL_UPDATE = 'Updating rune data and personal collection...'
 NOTIF_PERFORMING_P_DATA_UPDATE = 'Updating personal collection...'
 NOTIF_WRITING_DATA_FILES = 'Writing rune data files...'
 NOTIF_WRITING_P_DATA_FILES = 'Writing personal data files...'
+NOTIF_WRITING_P_PREFERENCES_FILE = 'Writing personal preferences file...'
+
+VALUE_RARITY_COMMON = 0
+VALUE_RARITY_UNCOMMON = 1
+VALUE_RARITY_RARE = 2
+VALUE_RARITY_EXOTIC = 3
+VALUE_RARITY_LEGENDARY = 5
+VALUE_RARITY_COMMON_KEEP = 2
+VALUE_RARITY_UNCOMMON_KEEP = 2
+VALUE_RARITY_RARE_KEEP = 2
+VALUE_RARITY_EXOTIC_KEEP = 100
+VALUE_RARITY_LEGENDARY_KEEP = 100

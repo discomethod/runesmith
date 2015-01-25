@@ -16,6 +16,7 @@ FILE_P_S_DATA = '{0}_s.data'
 FILE_P_R_DATA = '{0}_r.data'
 FILE_P_E_DATA = '{0}_e.data'
 FILE_P_KEEP = '{}_keep.data'
+FILE_TRADE_IN_LOG = 'trade_in_{}.log'
 
 ERROR_DATA_FILES_READ = 'Could not find saved data files.'
 ERROR_DATA_FILES_WRITE = 'Could not open data files for write.'
@@ -59,7 +60,7 @@ TYPE_RELIC = 'r'
 TYPE_EQUIPMENT = 'e'
 TYPE_RARITIES = ('Common','Uncommon','Rare','Exotic','','Legendary')
 
-URL_DOFORGE = '/runes/do-forge.do?i={0}&t=c&k={1}&a={2}&_={3}'  # url for performing rune sacrifice or forge
+URL_DOFORGE = '/runes/do-forge.do?i={0}&t={1}&k={2}&a={3}&_={4}'  # url for performing rune sacrifice or forge
                                                                 # a is 0 to forge, 1 to sacrifice
 URL_FETCHFORGE = '/runes/load-forge.do?m=forge&_={0}'  # url for fetching the forge page
 URL_LAUNCHFORGE = '/runes/launch-forge.do?m=forge&i={0}&t={1}'  # url for fetching rune data

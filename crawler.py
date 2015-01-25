@@ -198,64 +198,6 @@ def query_nora_values(id, t):
     return (nora_values[0], nora_values[2])
 
 
-def do_trade_in(baseId, type):
-    # try as best we can to trade in rune with baseId and type, while keeping in mind a few rules
-    # don't try to trade things that are in decks
-    # don't trade champions that are level 3
-    # don't trade below the keep value
-    traded = False
-    trade_in_url = constants.POXNORA_URL + constants.URL_LAUNCHFORGE.format(str(baseId), type)
-    try:
-        copies_to_keep = get_keep(baseId, type)
-    except RunesmithNoKeepValueDefined:
-        raise
-    while not traded:
-        trade_in_request = c.get(trade_in_url)
-        try:
-            trade_in_soup = parse_poxnora_page(trade_in_request.text)
-        except PoxNoraMaintenanceError:
-            raise
-        copies_owned = int(trade_in_soup.find(id=constants.NAME_RUNE_COUNT).string)
-        if copies_owned > copies_to_keep:
-            # there are enough runes
-            in_deck = str(trade_in_soup(text=re.compile(constants.REGEX_IN_DECK))[0])
-            if 'No' in in_deck:
-                # this rune is not in a deck
-                # if it's a champion rune, don't trade in unless it's level 1
-                if type is not constants.TYPE_CHAMPION or int(
-                        trade_in_soup.find(id=constants.NAME_RUNE_LEVEL).string) < 3:
-                    # TODO do the trade
-                    sacrifice_id = str(
-                        trade_in_soup.find(id=constants.NAME_SACRIFICE)[constants.NAME_SACRIFICE_ATTRIBUTE])
-                    token = str(re.search(constants.REGEX_DOFORGE, trade_in_soup.get_text()).groups()[0])
-                    trade_in_token_request = c.get(
-                        constants.POXNORA_URL + constants.URL_DOFORGE.format(sacrifice_id, token, '1',
-                                                                             str(int(time.time()))))
-                    trade_in_token_result = trade_in_token_request.json()
-                    if trade_in_token_result['status'] is 1:
-                        # yay it worked
-                        global current_balance
-                        gained = trade_in_token_result['balance'] - current_balance
-                        current_balance = trade_in_token_result['balance']
-                        print constants.NOTIF_SUCCESS_TRADE_IN.format(type, str(baseId), str(gained))
-                        traded = True
-                        fetch_data(False, True)
-                    else:
-                        raise RunesmithSacrificeFailed
-                        # current copy is a champion at level 3
-                # current copy is in a deck
-            # try to find the next link
-            next_link = trade_in_soup.find(id=constants.NAME_FORGE_NEXT_LINK)
-            if constants.NAME_FORGE_LAST_RUNE in str(next_link['class']):
-                # there are no more runes to consider
-                raise RunesmithNotEnoughToTrade
-            # there is still hope! get the next link
-            trade_in_url = constants.POXNORA_URL + str(next_link['href'])
-        else:
-            # there are not enough copies to keep
-            raise RunesmithNotEnoughToTrade
-
-
 def fetch_data(update_data_param=False, update_p_data_param=False):
     """
     Fetch specific data frames by querying Pox Nora website.
@@ -537,6 +479,64 @@ def load_p_keep():
     refresh_p_keep()
 
 
+def do_trade_in(baseId, type, file=None):
+    # try as best we can to trade in rune with baseId and type, while keeping in mind a few rules
+    # don't try to trade things that are in decks
+    # don't trade champions that are level 3
+    # don't trade below the keep value
+    traded = False
+    trade_in_url = constants.POXNORA_URL + constants.URL_LAUNCHFORGE.format(str(baseId), type)
+    try:
+        copies_to_keep = get_keep(baseId, type)
+    except RunesmithNoKeepValueDefined:
+        raise
+    while not traded:
+        trade_in_request = c.get(trade_in_url)
+        try:
+            trade_in_soup = parse_poxnora_page(trade_in_request.text)
+        except PoxNoraMaintenanceError:
+            raise
+        copies_owned = int(trade_in_soup.find(id=constants.NAME_RUNE_COUNT).string)
+        if copies_owned > copies_to_keep:
+            # there are enough runes
+            in_deck = str(trade_in_soup(text=re.compile(constants.REGEX_IN_DECK))[0])
+            if 'No' in in_deck:
+                # this rune is not in a deck
+                # if it's a champion rune, don't trade in unless it's level 1
+                if type is not constants.TYPE_CHAMPION or int(
+                        trade_in_soup.find(id=constants.NAME_RUNE_LEVEL).string) < 3:
+                    # TODO do the trade
+                    sacrifice_id = str(
+                        trade_in_soup.find(id=constants.NAME_SACRIFICE)[constants.NAME_SACRIFICE_ATTRIBUTE])
+                    token = str(re.search(constants.REGEX_DOFORGE, trade_in_soup.get_text()).groups()[0])
+                    trade_in_token_request = c.get(
+                        constants.POXNORA_URL + constants.URL_DOFORGE.format(sacrifice_id, token, '1',
+                                                                             str(int(time.time()))))
+                    trade_in_token_result = trade_in_token_request.json()
+                    if trade_in_token_result['status'] is 1:
+                        # yay it worked
+                        global current_balance
+                        gained = trade_in_token_result['balance'] - current_balance
+                        current_balance = trade_in_token_result['balance']
+                        if file is not None:
+                            file.write(constants.NOTIF_SUCCESS_TRADE_IN.format(type, str(baseId), str(gained))+'\n')
+                        traded = True
+                    else:
+                        raise RunesmithSacrificeFailed
+                        # current copy is a champion at level 3
+                # current copy is in a deck
+            # try to find the next link
+            next_link = trade_in_soup.find(id=constants.NAME_FORGE_NEXT_LINK)
+            if constants.NAME_FORGE_LAST_RUNE in str(next_link['class']):
+                # there are no more runes to consider
+                raise RunesmithNotEnoughToTrade
+            # there is still hope! get the next link
+            trade_in_url = constants.POXNORA_URL + str(next_link['href'])
+        else:
+            # there are not enough copies to keep
+            raise RunesmithNotEnoughToTrade
+
+
 def calculate_net_worth(mult_factor=1, add_factor=0):
     # calculate the net worth of this account assuming we trade in all excess runes
     load_data()
@@ -547,19 +547,41 @@ def calculate_net_worth(mult_factor=1, add_factor=0):
                                               pd.merge(r_data, p_r_data, on=['baseId', 'runetype'], sort=False),
                                               pd.merge(e_data, p_e_data, on=['baseId', 'runetype'], sort=False), ]),
                            on=['baseId', 'runetype'], sort=False)
-    merged_data['worth'] = np.maximum(np.zeros(len(merged_data.index)), merged_data['in'] * (
-        merged_data['count'] - (merged_data['keep'] * mult_factor + add_factor)))
+    merged_data['totrade'] = np.floor(np.maximum(np.zeros(len(merged_data.index)),
+                                        merged_data['count'] - (merged_data['keep'] * mult_factor + add_factor)))
+    merged_data['worth'] = merged_data['in'] * merged_data['totrade']
     if mult_factor is 1 and add_factor is 0:
         # only print out the CSV for unmodified keep values
         with open('{0}_networth.csv'.format(current_username), 'w') as f:
+            f.write('"name","in","out","count","totrade","worth"\n')
             try:
                 for index, row in merged_data.iterrows():
-                    f.write('"{0}",{1},{2},{3},{4}\n'.format(row['name'], row['in'], row['out'], row['count'],
-                                                             row['worth']))
+                    f.write('"{0}",{1},{2},{3},{4},{5}\n'.format(row['name'], row['in'], row['out'], row['count'],
+                                                                 row['totrade'], row['worth']))
             except IOError as e:
                 print e.errno
                 raise
     return merged_data
 
+
+def do_trade_in_batch():
+    global current_balance
+    query_forge()
+    starting_balance = current_balance
+    merged_data = calculate_net_worth(1,0)
+    traded = 0
+    log = open('trade_in.log','w')
+    for index, row in merged_data.iterrows():
+        to_trade = int(row['totrade'])
+        for counter in range(to_trade):
+            try:
+                do_trade_in(row['baseId'],row['runetype'],log)
+            except RunesmithNotEnoughToTrade:
+                continue
+            traded += 1
+    query_forge()
+    ending_balance = current_balance
+    print constants.NOTIF_SUCCES_TRADE_IN_BULK.format(traded,ending_balance-starting_balance)
+    fetch_data(False,True)
 
 c = session()

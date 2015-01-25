@@ -43,6 +43,7 @@ NOTIF_PERFORMING_FULL_UPDATE = 'Updating rune data and personal collection...'
 NOTIF_PERFORMING_P_DATA_UPDATE = 'Updating personal collection...'
 NOTIF_SUCCESS_LOGIN = 'Welcome to Runesmith, {0}!'
 NOTIF_SUCCESS_TRADE_IN = 'Sacrificed {0}-{1} rune, earning {2} nora.'
+NOTIF_SUCCES_TRADE_IN_BULK = 'Traded in {0} runes, earning {1} nora.'
 NOTIF_WRITING_DATA_FILES = 'Writing rune data files...'
 NOTIF_WRITING_P_DATA_FILES = 'Writing personal data files...'
 NOTIF_WRITING_P_PREFERENCES_FILE = 'Writing personal preferences file...'
@@ -56,6 +57,7 @@ TYPE_CHAMPION = 'c'
 TYPE_SPELL = 's'
 TYPE_RELIC = 'r'
 TYPE_EQUIPMENT = 'e'
+TYPE_RARITIES = ('Common','Uncommon','Rare','Exotic','','Legendary')
 
 URL_DOFORGE = '/runes/do-forge.do?i={0}&t=c&k={1}&a={2}&_={3}'  # url for performing rune sacrifice or forge
                                                                 # a is 0 to forge, 1 to sacrifice

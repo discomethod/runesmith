@@ -38,18 +38,23 @@ class PoxNoraMaintenanceError(Exception):
     def __init__(self, *args):
         self.message = constants.ERROR_POXNORA_MAINTENANCE
 
+
 class RunesmithLoginFailed(Exception):
     pass
+
 
 class RunesmithNoKeepValueDefined(Exception):
     pass
 
+
 class RunesmithNotEnoughToTrade(Exception):
     pass
+
 
 class RunesmithRarityUndefined(Exception):
     def __init__(self):
         self.message = constants.ERROR_RARITY_UNDEFINED
+
 
 class RunesmithSacrificeFailed(Exception):
     pass
@@ -87,16 +92,18 @@ def get_default_keep(rarity):
         return constants.VALUE_RARITY_LEGENDARY_KEEP
     raise RunesmithRarityUndefined
 
+
 def get_keep(baseId, type):
     # get the number to keep for a specific rune
     load_p_keep()
     global p_keep
     try:
-        filtered = p_keep[p_keep['baseId']==baseId]
-        filtered_row = filtered[filtered['runetype']==type].index[0]
+        filtered = p_keep[p_keep['baseId'] == baseId]
+        filtered_row = filtered[filtered['runetype'] == type].index[0]
     except Exception:
         raise RunesmithNoKeepValueDefined(constants.ERROR_RUNESMITH_KEEP_VALUE_NOT_DEFINED.format(baseId, type))
-    return filtered.loc[filtered_row,'keep']
+    return filtered.loc[filtered_row, 'keep']
+
 
 def parse_poxnora_page(html):
     parse = bsoup(html)
@@ -125,8 +132,7 @@ def do_login(username='plasticgum', password=''):
     # generate post data payload
     payload = { 'username': username, 'password': password, }
     # update the login payload by including the hidden field
-    payload.update(
-        { str(login_form_hidden['name']): str(login_form_hidden['value']) })
+    payload.update({ str(login_form_hidden['name']): str(login_form_hidden['value']) })
     # do login
     login_response = c.post(constants.POXNORA_URL + constants.URL_LOGINDO, data=payload)
 
@@ -209,18 +215,18 @@ def do_trade_in(baseId, type):
             trade_in_soup = parse_poxnora_page(trade_in_request.text)
         except PoxNoraMaintenanceError:
             raise
-        copies_owned = int(trade_in_soup.find(id='rune-count').string)
+        copies_owned = int(trade_in_soup.find(id=constants.NAME_RUNE_COUNT).string)
         if copies_owned > copies_to_keep:
             # there are enough runes
-            in_deck = str(trade_in_soup(text=re.compile(r'In Deck'))[0])
+            in_deck = str(trade_in_soup(text=re.compile(constants.REGEX_IN_DECK))[0])
             if 'No' in in_deck:
                 # this rune is not in a deck
                 # if it's a champion rune, don't trade in unless it's level 1
-                if type is not constants.TYPE_CHAMPION or int(trade_in_soup.find(id='rune-level').string) < 3:
+                if type is not constants.TYPE_CHAMPION or int(
+                        trade_in_soup.find(id=constants.NAME_RUNE_LEVEL).string) < 3:
                     # TODO do the trade
-                    sacrifice_id = str(trade_in_soup.find(id='sacrifice-link')['data-id'])
-                    # needle = re.compile(constants.REGEX_DOFORGE)
-                    # token = str(needle.search(trade_in_request.get_text()).groups()[0])
+                    sacrifice_id = str(
+                        trade_in_soup.find(id=constants.NAME_SACRIFICE)[constants.NAME_SACRIFICE_ATTRIBUTE])
                     token = str(re.search(constants.REGEX_DOFORGE, trade_in_soup.get_text()).groups()[0])
                     trade_in_token_request = c.get(
                         constants.POXNORA_URL + constants.URL_DOFORGE.format(sacrifice_id, token, '1',
@@ -233,22 +239,21 @@ def do_trade_in(baseId, type):
                         current_balance = trade_in_token_result['balance']
                         print constants.NOTIF_SUCCESS_TRADE_IN.format(type, str(baseId), str(gained))
                         traded = True
-                        fetch_data(False,True)
+                        fetch_data(False, True)
                     else:
                         raise RunesmithSacrificeFailed
-                # current copy is a champion at level 3
-            # current copy is in a deck
+                        # current copy is a champion at level 3
+                # current copy is in a deck
             # try to find the next link
-            next_link = trade_in_soup.find(id='next-link')
-            if u'pager-disabled' in next_link['class']:
+            next_link = trade_in_soup.find(id=constants.NAME_FORGE_NEXT_LINK)
+            if constants.NAME_FORGE_LAST_RUNE in str(next_link['class']):
                 # there are no more runes to consider
                 raise RunesmithNotEnoughToTrade
-                # there is still hope! get the next link
+            # there is still hope! get the next link
             trade_in_url = constants.POXNORA_URL + str(next_link['href'])
         else:
             # there are not enough copies to keep
             raise RunesmithNotEnoughToTrade
-
 
 
 def fetch_data(update_data_param=False, update_p_data_param=False):
@@ -543,7 +548,7 @@ def calculate_net_worth(mult_factor=1, add_factor=0):
                                               pd.merge(e_data, p_e_data, on=['baseId', 'runetype'], sort=False), ]),
                            on=['baseId', 'runetype'], sort=False)
     merged_data['worth'] = np.maximum(np.zeros(len(merged_data.index)), merged_data['in'] * (
-    merged_data['count'] - (merged_data['keep'] * mult_factor + add_factor)))
+        merged_data['count'] - (merged_data['keep'] * mult_factor + add_factor)))
     if mult_factor is 1 and add_factor is 0:
         # only print out the CSV for unmodified keep values
         with open('{0}_networth.csv'.format(current_username), 'w') as f:

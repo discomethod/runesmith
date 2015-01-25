@@ -29,7 +29,13 @@ ERROR_RUNESMITH_KEEP_VALUE_NOT_DEFINED = 'Could not find a keep value associated
 
 NAME_LOGINFORM = 'loginForm'  # name of login form element
 NAME_FORGEACTION = 'forge-action'  # name of div containing nora worth values
+NAME_FORGE_LAST_RUNE = 'pager-disabled'  # class attribute added if rune is last rune
+NAME_FORGE_NEXT_LINK = 'next-link'  # link going to next rune
 NAME_NORAVALUE = 'nora-value'  # name of class of each nora worth value element
+NAME_RUNE_COUNT = 'rune-count'  # name of copies of rune
+NAME_RUNE_LEVEL = 'rune-level'  # name of the element that stores champion level
+NAME_SACRIFICE = 'sacrifice-link'  # name of the element that stores the sacrifice ID
+NAME_SACRIFICE_ATTRIBUTE = 'data-id'  # name of the relavent attribute of the sacrifice element
 
 NOTIF_FETCHING_RUNE = 'Fetching {0} {1:0>4d}/{2:0>4d}\r'
 NOTIF_PERFORMING_DATA_UPDATE = 'Updating rune data...'
@@ -43,7 +49,8 @@ NOTIF_WRITING_P_PREFERENCES_FILE = 'Writing personal preferences file...'
 
 POXNORA_URL = 'https://www.poxnora.com'
 
-REGEX_DOFORGE = r"var currentToken = '([0-9a-zA-Z-]+)'"
+REGEX_DOFORGE = r"var currentToken = '([0-9a-zA-Z-]+)'"  # finding the CSRF token
+REGEX_IN_DECK = r'In Deck'  # determining if a rune is in a deck
 
 TYPE_CHAMPION = 'c'
 TYPE_SPELL = 's'

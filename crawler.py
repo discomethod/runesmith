@@ -1,16 +1,17 @@
-import constants
 import errno
-import json
-import numpy as np
-import pandas as pd
 import pickle
+import re
 import sys
 import time
-
-from bs4 import BeautifulSoup as bsoup
 from os import getcwd, makedirs
-from os.path import isdir, join
+from os.path import join
+
+import numpy as np
+import pandas as pd
+from bs4 import BeautifulSoup as bsoup
 from requests import session
+
+import constants
 
 current_username = ''
 current_balance = 0
@@ -35,12 +36,23 @@ p_keep = pd.DataFrame()
 
 class PoxNoraMaintenanceError(Exception):
     def __init__(self, *args):
-        self.args = [a for a in args]
         self.message = constants.ERROR_POXNORA_MAINTENANCE
 
-class PoxNoraRarityUndefined(Exception):
+class RunesmithLoginFailed(Exception):
+    pass
+
+class RunesmithNoKeepValueDefined(Exception):
+    pass
+
+class RunesmithNotEnoughToTrade(Exception):
+    pass
+
+class RunesmithRarityUndefined(Exception):
     def __init__(self):
         self.message = constants.ERROR_RARITY_UNDEFINED
+
+class RunesmithSacrificeFailed(Exception):
+    pass
 
 # --- END EXCEPTIONS --- #
 
@@ -51,7 +63,7 @@ def get_data_directory():
 
     """
     # determine path for data directory
-    data_directory = join(getcwd(),constants.DIR_DATA)
+    data_directory = join(getcwd(), constants.DIR_DATA)
     # create directory if it does not exist
     try:
         makedirs(data_directory)
@@ -59,6 +71,7 @@ def get_data_directory():
         if e.errno is not errno.EEXIST:
             raise
     return data_directory
+
 
 def get_default_keep(rarity):
     rarity = int(rarity)
@@ -72,18 +85,29 @@ def get_default_keep(rarity):
         return constants.VALUE_RARITY_EXOTIC_KEEP
     if rarity is constants.VALUE_RARITY_LEGENDARY:
         return constants.VALUE_RARITY_LEGENDARY_KEEP
-    raise PoxNoraRarityUndefined
+    raise RunesmithRarityUndefined
+
+def get_keep(baseId, type):
+    # get the number to keep for a specific rune
+    load_p_keep()
+    global p_keep
+    try:
+        filtered = p_keep[p_keep['baseId']==baseId]
+        filtered_row = filtered[filtered['runetype']==type].index[0]
+    except Exception:
+        raise RunesmithNoKeepValueDefined(constants.ERROR_RUNESMITH_KEEP_VALUE_NOT_DEFINED.format(baseId, type))
+    return filtered.loc[filtered_row,'keep']
 
 def parse_poxnora_page(html):
     parse = bsoup(html)
     # some returned pages have no <title> tag
-    if parse.title is not None and 'MAINTENANCE' in parse.title.string.encode('ascii','ignore').upper():
+    if parse.title is not None and 'MAINTENANCE' in parse.title.string.encode('ascii', 'ignore').upper():
         raise PoxNoraMaintenanceError
     return parse
 
 # --- END HELPER FUNCTIONS --- #
 
-def do_login(username='plasticgum',password=''):
+def do_login(username='plasticgum', password=''):
     # make a request to the login screen
     login_request = c.get(constants.POXNORA_URL + constants.URL_LOGIN)
     # parse the login request as html
@@ -93,24 +117,35 @@ def do_login(username='plasticgum',password=''):
         raise
 
     # find the first instance of an element named NAME_LOGINFORM
-    login_form = login_soup.find(attrs={'name': constants.NAME_LOGINFORM,})
+    login_form = login_soup.find(attrs={ 'name': constants.NAME_LOGINFORM, })
 
     # find the hidden element (we are only expecting one)
-    login_form_hidden = login_form.find(attrs={'type': 'hidden',})
+    login_form_hidden = login_form.find(attrs={ 'type': 'hidden', })
 
     # generate post data payload
-    payload = {
-        'username': username,
-        'password': password,
-    }
+    payload = { 'username': username, 'password': password, }
     # update the login payload by including the hidden field
-    payload.update({login_form_hidden['name'].encode('ascii','ignore'):login_form_hidden['value'].encode('ascii','ignore')})
+    payload.update(
+        { str(login_form_hidden['name']): str(login_form_hidden['value']) })
     # do login
-    c.post(constants.POXNORA_URL + constants.URL_LOGINDO, data=payload)
+    login_response = c.post(constants.POXNORA_URL + constants.URL_LOGINDO, data=payload)
+
+    try:
+        login_soup = parse_poxnora_page(login_response.text)
+    except PoxNoraMaintenanceError:
+        raise
+
+    if 'Login' in str(login_soup.title.string):
+        # login failed
+        print constants.ERROR_LOGIN_FAIL.format(username)
+        return
+
+    print constants.NOTIF_SUCCESS_LOGIN.format(username)
 
     # TODO check if do_login request worked
     global current_username
     current_username = username
+
 
 def query_forge():
     """Queries the Pox Nora website and extracts raw data from the Rune Forge page.
@@ -123,15 +158,14 @@ def query_forge():
     # convert dictionary to separate dataframes
     if len(forge_data) < 1:
         print constants.ERROR_RUNE_DATA_NOT_FOUND
-        return (None,None,None,None)
+        return (None, None, None, None)
     global current_balance
     current_balance = int(forge_data['balance'])
-    return (pd.DataFrame.from_dict(forge_data['champions']),
-            pd.DataFrame.from_dict(forge_data['spells']),
-            pd.DataFrame.from_dict(forge_data['relics']),
-            pd.DataFrame.from_dict(forge_data['equipment']))
+    return (pd.DataFrame.from_dict(forge_data['champions']), pd.DataFrame.from_dict(forge_data['spells']),
+            pd.DataFrame.from_dict(forge_data['relics']), pd.DataFrame.from_dict(forge_data['equipment']))
 
-def query_nora_values(id,t):
+
+def query_nora_values(id, t):
     """Return the nora values of a specific rune.
 
     Args:
@@ -146,18 +180,78 @@ def query_nora_values(id,t):
         PoxNoraMaintenanceError: If the Pox Nora website is unavailable
             due to maintenance.
     """
-    request_string = constants.POXNORA_URL + constants.URL_LAUNCHFORGE.format(str(id),t)
-    nora_values_request = c.get(request_string)
+    nora_values_request = c.get(constants.POXNORA_URL + constants.URL_LAUNCHFORGE.format(str(id), t))
     try:
         nora_values_soup = parse_poxnora_page(nora_values_request.text)
-    except PoxNoraMaintenanceError as e:
+    except PoxNoraMaintenanceError:
         raise
     nora_values = []
-    for item in nora_values_soup.find(id=constants.NAME_FORGEACTION).find_all(attrs={'class':constants.NAME_NORAVALUE,}):
+    for item in nora_values_soup.find(id=constants.NAME_FORGEACTION).find_all(
+            attrs={ 'class': constants.NAME_NORAVALUE, }):
         nora_values.append(int(item.text))
-    return (nora_values[0],nora_values[2])
+    return (nora_values[0], nora_values[2])
 
-def fetch_data(update_data_param=False,update_p_data_param=False):
+
+def do_trade_in(baseId, type):
+    # try as best we can to trade in rune with baseId and type, while keeping in mind a few rules
+    # don't try to trade things that are in decks
+    # don't trade champions that are level 3
+    # don't trade below the keep value
+    traded = False
+    trade_in_url = constants.POXNORA_URL + constants.URL_LAUNCHFORGE.format(str(baseId), type)
+    try:
+        copies_to_keep = get_keep(baseId, type)
+    except RunesmithNoKeepValueDefined:
+        raise
+    while not traded:
+        trade_in_request = c.get(trade_in_url)
+        try:
+            trade_in_soup = parse_poxnora_page(trade_in_request.text)
+        except PoxNoraMaintenanceError:
+            raise
+        copies_owned = int(trade_in_soup.find(id='rune-count').string)
+        if copies_owned > copies_to_keep:
+            # there are enough runes
+            in_deck = str(trade_in_soup(text=re.compile(r'In Deck'))[0])
+            if 'No' in in_deck:
+                # this rune is not in a deck
+                # if it's a champion rune, don't trade in unless it's level 1
+                if type is not constants.TYPE_CHAMPION or int(trade_in_soup.find(id='rune-level').string) < 3:
+                    # TODO do the trade
+                    sacrifice_id = str(trade_in_soup.find(id='sacrifice-link')['data-id'])
+                    # needle = re.compile(constants.REGEX_DOFORGE)
+                    # token = str(needle.search(trade_in_request.get_text()).groups()[0])
+                    token = str(re.search(constants.REGEX_DOFORGE, trade_in_soup.get_text()).groups()[0])
+                    trade_in_token_request = c.get(
+                        constants.POXNORA_URL + constants.URL_DOFORGE.format(sacrifice_id, token, '1',
+                                                                             str(int(time.time()))))
+                    trade_in_token_result = trade_in_token_request.json()
+                    if trade_in_token_result['status'] is 1:
+                        # yay it worked
+                        global current_balance
+                        gained = trade_in_token_result['balance'] - current_balance
+                        current_balance = trade_in_token_result['balance']
+                        print constants.NOTIF_SUCCESS_TRADE_IN.format(type, str(baseId), str(gained))
+                        traded = True
+                        fetch_data(False,True)
+                    else:
+                        raise RunesmithSacrificeFailed
+                # current copy is a champion at level 3
+            # current copy is in a deck
+            # try to find the next link
+            next_link = trade_in_soup.find(id='next-link')
+            if u'pager-disabled' in next_link['class']:
+                # there are no more runes to consider
+                raise RunesmithNotEnoughToTrade
+                # there is still hope! get the next link
+            trade_in_url = constants.POXNORA_URL + str(next_link['href'])
+        else:
+            # there are not enough copies to keep
+            raise RunesmithNotEnoughToTrade
+
+
+
+def fetch_data(update_data_param=False, update_p_data_param=False):
     """
     Fetch specific data frames by querying Pox Nora website.
 
@@ -172,18 +266,18 @@ def fetch_data(update_data_param=False,update_p_data_param=False):
     if not update_data_param and not update_p_data_param:
         # made a useless call
         return False
-    (raw_champs,raw_spells,raw_relics,raw_equipments) = query_forge()
+    (raw_champs, raw_spells, raw_relics, raw_equipments) = query_forge()
     if raw_champs is not None and raw_spells is not None and raw_relics is not None and raw_equipments is not None:
         if update_data_param:
             print constants.NOTIF_PERFORMING_DATA_UPDATE
             try:
-                update_data_from_raw(raw_champs,raw_spells,raw_relics,raw_equipments)
+                update_data_from_raw(raw_champs, raw_spells, raw_relics, raw_equipments)
             except PoxNoraMaintenanceError as e:
                 raise
         if update_p_data_param:
             print constants.NOTIF_PERFORMING_P_DATA_UPDATE
             try:
-                update_p_data_from_raw(raw_champs,raw_spells,raw_relics,raw_equipments)
+                update_p_data_from_raw(raw_champs, raw_spells, raw_relics, raw_equipments)
             except PoxNoraMaintenanceError as e:
                 raise
         return True
@@ -191,15 +285,16 @@ def fetch_data(update_data_param=False,update_p_data_param=False):
         print constants.ERROR_PARSE_FORGE
         return False
 
+
 def query_nora_values_batch(data, name, t):
     total = len(data.index)
     my_in = []
     my_out = []
     for index, row in data.iterrows():
         try:
-            sys.stdout.write(constants.NOTIF_FETCHING_RUNE.format(name,index+1,total))
+            sys.stdout.write(constants.NOTIF_FETCHING_RUNE.format(name, index + 1, total))
             sys.stdout.flush()
-            (this_in, this_out) = query_nora_values(row['baseId'],t)
+            (this_in, this_out) = query_nora_values(row['baseId'], t)
         except PoxNoraMaintenanceError:
             raise
         my_in.append(this_in)
@@ -208,7 +303,8 @@ def query_nora_values_batch(data, name, t):
     data['in'] = my_in
     data['out'] = my_out
 
-def update_data_from_raw(raw_champs,raw_spells,raw_relics,raw_equipments):
+
+def update_data_from_raw(raw_champs, raw_spells, raw_relics, raw_equipments):
     # update global data files, assuming recently updated local variables
     # setup references to global variables
     global c_data, s_data, r_data, e_data
@@ -221,11 +317,12 @@ def update_data_from_raw(raw_champs,raw_spells,raw_relics,raw_equipments):
     s_data['runetype'] = constants.TYPE_SPELL
     r_data['runetype'] = constants.TYPE_RELIC
     e_data['runetype'] = constants.TYPE_EQUIPMENT
-    
-    query_nora_values_batch(c_data,'champion',constants.TYPE_CHAMPION)
-    query_nora_values_batch(s_data,'spell',constants.TYPE_SPELL)
-    query_nora_values_batch(r_data,'relic',constants.TYPE_RELIC)
-    query_nora_values_batch(e_data,'equipment',constants.TYPE_EQUIPMENT)
+
+    query_nora_values_batch(c_data, 'champion', constants.TYPE_CHAMPION)
+    query_nora_values_batch(s_data, 'spell', constants.TYPE_SPELL)
+    query_nora_values_batch(r_data, 'relic', constants.TYPE_RELIC)
+    query_nora_values_batch(e_data, 'equipment', constants.TYPE_EQUIPMENT)
+
 
 def save_data_to_file():
     global c_data, s_data, r_data, e_data
@@ -233,36 +330,38 @@ def save_data_to_file():
     data_directory = get_data_directory()
     print constants.NOTIF_WRITING_DATA_FILES
     try:
-        with open(join(data_directory,constants.FILE_C_DATA),'w') as f:
-            pickle.dump(c_data,f)
-        with open(join(data_directory,constants.FILE_S_DATA),'w') as f:
-            pickle.dump(s_data,f)
-        with open(join(data_directory,constants.FILE_R_DATA),'w') as f:
-            pickle.dump(r_data,f)
-        with open(join(data_directory,constants.FILE_E_DATA),'w') as f:
-            pickle.dump(e_data,f)
+        with open(join(data_directory, constants.FILE_C_DATA), 'w') as f:
+            pickle.dump(c_data, f)
+        with open(join(data_directory, constants.FILE_S_DATA), 'w') as f:
+            pickle.dump(s_data, f)
+        with open(join(data_directory, constants.FILE_R_DATA), 'w') as f:
+            pickle.dump(r_data, f)
+        with open(join(data_directory, constants.FILE_E_DATA), 'w') as f:
+            pickle.dump(e_data, f)
     except IOError:
         # couldn't open files
         print constants.ERROR_DATA_FILES_WRITE
+
 
 def load_data_from_file():
     # read data files into *_data memory
     data_directory = get_data_directory()
     global c_data, s_data, r_data, e_data
     try:
-        with open(join(data_directory,constants.FILE_C_DATA),'r') as f:
+        with open(join(data_directory, constants.FILE_C_DATA), 'r') as f:
             c_data = pickle.load(f)
-        with open(join(data_directory,constants.FILE_S_DATA),'r') as f:
+        with open(join(data_directory, constants.FILE_S_DATA), 'r') as f:
             s_data = pickle.load(f)
-        with open(join(data_directory,constants.FILE_R_DATA),'r') as f:
+        with open(join(data_directory, constants.FILE_R_DATA), 'r') as f:
             r_data = pickle.load(f)
-        with open(join(data_directory,constants.FILE_E_DATA),'r') as f:
+        with open(join(data_directory, constants.FILE_E_DATA), 'r') as f:
             e_data = pickle.load(f)
     except IOError:
         # could not open files
         print constants.ERROR_DATA_FILES_READ
 
-def update_p_data_from_raw(raw_champs,raw_spells,raw_relics,raw_equipments):
+
+def update_p_data_from_raw(raw_champs, raw_spells, raw_relics, raw_equipments):
     # update player data files from the raw files
     global p_c_data, p_s_data, p_r_data, p_e_data
     p_c_data[constants.COLUMNS_P_C_DATA] = raw_champs[constants.COLUMNS_P_C_DATA]
@@ -274,6 +373,7 @@ def update_p_data_from_raw(raw_champs,raw_spells,raw_relics,raw_equipments):
     p_r_data['runetype'] = constants.TYPE_RELIC
     p_e_data['runetype'] = constants.TYPE_EQUIPMENT
 
+
 def save_p_data_to_file():
     # update player data files
     global p_c_data, p_s_data, p_r_data, p_e_data
@@ -281,14 +381,14 @@ def save_p_data_to_file():
     data_directory = get_data_directory()
     print constants.NOTIF_WRITING_P_DATA_FILES
     try:
-        with open(join(data_directory,constants.FILE_P_C_DATA.format(current_username)),'w') as f:
-            pickle.dump(p_c_data,f)
-        with open(join(data_directory,constants.FILE_P_S_DATA.format(current_username)),'w') as f:
-            pickle.dump(p_s_data,f)
-        with open(join(data_directory,constants.FILE_P_R_DATA.format(current_username)),'w') as f:
-            pickle.dump(p_r_data,f)
-        with open(join(data_directory,constants.FILE_P_E_DATA.format(current_username)),'w') as f:
-            pickle.dump(p_e_data,f)
+        with open(join(data_directory, constants.FILE_P_C_DATA.format(current_username)), 'w') as f:
+            pickle.dump(p_c_data, f)
+        with open(join(data_directory, constants.FILE_P_S_DATA.format(current_username)), 'w') as f:
+            pickle.dump(p_s_data, f)
+        with open(join(data_directory, constants.FILE_P_R_DATA.format(current_username)), 'w') as f:
+            pickle.dump(p_r_data, f)
+        with open(join(data_directory, constants.FILE_P_E_DATA.format(current_username)), 'w') as f:
+            pickle.dump(p_e_data, f)
     except IOError:
         # couldn't open files
         print constants.ERROR_DATA_FILES_WRITE
@@ -299,30 +399,32 @@ def load_p_data_from_file():
     data_directory = get_data_directory()
     global p_c_data, p_s_data, p_r_data, p_e_data
     try:
-        with open(join(data_directory,constants.FILE_P_C_DATA.format(current_username)),'r') as f:
+        with open(join(data_directory, constants.FILE_P_C_DATA.format(current_username)), 'r') as f:
             p_c_data = pickle.load(f)
-        with open(join(data_directory,constants.FILE_P_S_DATA.format(current_username)),'r') as f:
+        with open(join(data_directory, constants.FILE_P_S_DATA.format(current_username)), 'r') as f:
             p_s_data = pickle.load(f)
-        with open(join(data_directory,constants.FILE_P_R_DATA.format(current_username)),'r') as f:
+        with open(join(data_directory, constants.FILE_P_R_DATA.format(current_username)), 'r') as f:
             p_r_data = pickle.load(f)
-        with open(join(data_directory,constants.FILE_P_E_DATA.format(current_username)),'r') as f:
+        with open(join(data_directory, constants.FILE_P_E_DATA.format(current_username)), 'r') as f:
             p_e_data = pickle.load(f)
     except IOError:
         # could not open files
         print constants.ERROR_DATA_FILES_READ
         raise
 
+
 def load_p_keep_from_file():
     # read person preference files into memory
     data_directory = get_data_directory()
     global p_keep
     try:
-        with open(join(data_directory,constants.FILE_P_KEEP.format(current_username)),'r') as f:
+        with open(join(data_directory, constants.FILE_P_KEEP.format(current_username)), 'r') as f:
             p_keep = pickle.load(f)
     except IOError:
         # could not open files
         print constants.ERROR_DATA_FILES_READ
         raise
+
 
 def save_p_keep_to_file():
     # save player preference files
@@ -331,11 +433,12 @@ def save_p_keep_to_file():
     data_directory = get_data_directory()
     print constants.NOTIF_WRITING_P_PREFERENCES_FILE
     try:
-        with open(join(data_directory,constants.FILE_P_KEEP.format(current_username)),'w') as f:
-            pickle.dump(p_keep,f)
+        with open(join(data_directory, constants.FILE_P_KEEP.format(current_username)), 'w') as f:
+            pickle.dump(p_keep, f)
     except IOError:
         # couldn't open files
         print constants.ERROR_DATA_FILES_WRITE
+
 
 def refresh_data():
     # load *_data into memory, regardless of current status
@@ -345,9 +448,10 @@ def refresh_data():
     except IOError:
         # loading from files failed
         try:
-            fetch_data(False,True) # update personal collection only
+            fetch_data(False, True) # update personal collection only
         except PoxNoraMaintenanceError:
             raise
+
 
 def refresh_p_data():
     # load p_*_data into memory, regardless of current status
@@ -357,9 +461,10 @@ def refresh_p_data():
     except IOError:
         # loading from files failed
         try:
-            fetch_data(False,True) # update personal collection only
+            fetch_data(False, True) # update personal collection only
         except PoxNoraMaintenanceError:
             raise
+
 
 def refresh_p_keep():
     # load p_keep into memory, regardless of current status
@@ -399,6 +504,7 @@ def refresh_p_keep():
         p_keep['runetype'] = todo_type
         save_p_keep_to_file()
 
+
 def load_data():
     global c_data, s_data, r_data, e_data
     # smart load of *_data into memory
@@ -406,6 +512,7 @@ def load_data():
         # data is already loaded
         return
     refresh_data()
+
 
 def load_p_data():
     global p_c_data, p_s_data, p_r_data, p_e_data
@@ -415,6 +522,7 @@ def load_p_data():
         return
     refresh_p_data()
 
+
 def load_p_keep():
     # smart load of p_keep into memory
     global p_keep
@@ -423,25 +531,30 @@ def load_p_keep():
         return
     refresh_p_keep()
 
-def calculate_net_worth(mult_factor=1,add_factor=0):
+
+def calculate_net_worth(mult_factor=1, add_factor=0):
     # calculate the net worth of this account assuming we trade in all excess runes
     load_data()
     load_p_data()
     load_p_keep()
-    merged_data = pd.merge(p_keep,pd.concat([pd.merge(c_data, p_c_data, on=['baseId','runetype'], sort=False),
-                             pd.merge(s_data, p_s_data, on=['baseId','runetype'], sort=False),
-                             pd.merge(r_data, p_r_data, on=['baseId','runetype'], sort=False),
-                             pd.merge(e_data, p_e_data, on=['baseId','runetype'], sort=False),]), on =['baseId','runetype'], sort=False)
-    merged_data['worth'] = np.maximum(np.zeros(len(merged_data.index)),merged_data['in'] * (merged_data['count']-(merged_data['keep']*mult_factor+add_factor)))
+    merged_data = pd.merge(p_keep, pd.concat([pd.merge(c_data, p_c_data, on=['baseId', 'runetype'], sort=False),
+                                              pd.merge(s_data, p_s_data, on=['baseId', 'runetype'], sort=False),
+                                              pd.merge(r_data, p_r_data, on=['baseId', 'runetype'], sort=False),
+                                              pd.merge(e_data, p_e_data, on=['baseId', 'runetype'], sort=False), ]),
+                           on=['baseId', 'runetype'], sort=False)
+    merged_data['worth'] = np.maximum(np.zeros(len(merged_data.index)), merged_data['in'] * (
+    merged_data['count'] - (merged_data['keep'] * mult_factor + add_factor)))
     if mult_factor is 1 and add_factor is 0:
         # only print out the CSV for unmodified keep values
-        with open('{0}_networth.csv'.format(current_username),'w') as f:
+        with open('{0}_networth.csv'.format(current_username), 'w') as f:
             try:
                 for index, row in merged_data.iterrows():
-                    f.write('"{0}",{1},{2},{3},{4}\n'.format(row['name'],row['in'],row['out'],row['count'],row['worth']))
+                    f.write('"{0}",{1},{2},{3},{4}\n'.format(row['name'], row['in'], row['out'], row['count'],
+                                                             row['worth']))
             except IOError as e:
                 print e.errno
                 raise
     return merged_data
+
 
 c = session()

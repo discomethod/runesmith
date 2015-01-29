@@ -119,7 +119,7 @@ def parse_poxnora_page(html):
 
 def do_login(username='plasticgum', password=''):
     # make a request to the login screen
-    login_request = c.get(constants.POXNORA_URL + constants.URL_LOGIN)
+    login_request = sess.get(constants.POXNORA_URL + constants.URL_LOGIN)
     # parse the login request as html
     try:
         login_soup = parse_poxnora_page(login_request.text)
@@ -137,7 +137,7 @@ def do_login(username='plasticgum', password=''):
     # update the login payload by including the hidden field
     payload.update({ str(login_form_hidden['name']): str(login_form_hidden['value']) })
     # do login
-    login_response = c.post(constants.POXNORA_URL + constants.URL_LOGINDO, data=payload)
+    login_response = sess.post(constants.POXNORA_URL + constants.URL_LOGINDO, data=payload)
 
     try:
         login_soup = parse_poxnora_page(login_response.text)
@@ -161,8 +161,8 @@ def query_forge():
     """Queries the Pox Nora website and extracts raw data from the Rune Forge page.
 
     """
-    # fetches forge data with session c (requires logged in)
-    query_forge_request = c.get(constants.POXNORA_URL + constants.URL_FETCHFORGE.format(str(int(time.time()))))
+    # fetches forge data with session sess (requires logged in)
+    query_forge_request = sess.get(constants.POXNORA_URL + constants.URL_FETCHFORGE.format(str(int(time.time()))))
     # convert json to dict
     forge_data = query_forge_request.json()
     # convert dictionary to separate dataframes
@@ -190,7 +190,7 @@ def query_nora_values(id, t):
         PoxNoraMaintenanceError: If the Pox Nora website is unavailable
             due to maintenance.
     """
-    nora_values_request = c.get(constants.POXNORA_URL + constants.URL_LAUNCHFORGE.format(str(id), t))
+    nora_values_request = sess.get(constants.POXNORA_URL + constants.URL_LAUNCHFORGE.format(str(id), t))
     try:
         nora_values_soup = parse_poxnora_page(nora_values_request.text)
     except PoxNoraMaintenanceError:
@@ -495,7 +495,7 @@ def do_trade_in(baseId, type, file=None):
     except RunesmithNoKeepValueDefined:
         raise
     while not traded:
-        trade_in_request = c.get(trade_in_url)
+        trade_in_request = sess.get(trade_in_url)
         try:
             trade_in_soup = parse_poxnora_page(trade_in_request.text)
         except PoxNoraMaintenanceError:
@@ -516,7 +516,7 @@ def do_trade_in(baseId, type, file=None):
                     sacrifice_id = str(
                         trade_in_soup.find(id=constants.NAME_SACRIFICE)[constants.NAME_SACRIFICE_ATTRIBUTE])
                     token = str(re.search(constants.REGEX_DOFORGE, trade_in_soup.get_text()).groups()[0])
-                    trade_in_token_request = c.get(
+                    trade_in_token_request = sess.get(
                         constants.POXNORA_URL + constants.URL_DOFORGE.format(sacrifice_id, type, token, '1',
                                                                              str(int(time.time()))))
                     trade_in_token_result = trade_in_token_request.json()
@@ -600,4 +600,4 @@ def do_trade_in_batch():
     print constants.NOTIF_SUCCES_TRADE_IN_BULK.format(traded,ending_balance-starting_balance)
     fetch_data(False,True)
 
-c = session()
+sess = session()

@@ -59,6 +59,7 @@ class RunesmithRarityUndefined(Exception):
 class RunesmithSacrificeFailed(Exception):
     pass
 
+
 class RunesmithSREInDeck(Exception):
     pass
 
@@ -154,7 +155,7 @@ def do_login(username='plasticgum', password=''):
     # TODO check if do_login request worked
     global current_username
     current_username = username
-    fetch_data(False,True)
+    fetch_data(False, True)
 
 
 def query_forge():
@@ -501,14 +502,12 @@ def do_trade_in(baseId, type, file=None):
         except PoxNoraMaintenanceError:
             raise
         copies_owned = int(trade_in_soup.find(id=constants.NAME_RUNE_COUNT).string)
+        # check whether there are extras to trade in
         if copies_owned > copies_to_keep:
-            # there are enough runes
-            if type is constants.TYPE_CHAMPION:
-                in_deck = str(trade_in_soup(text=re.compile(constants.REGEX_IN_DECK))[0])
-            else:
-                in_deck = 'No'
-            if 'No' in in_deck:
-                # this rune is not in a deck
+            # check if a champion rune is in a deck (note that the rune forge has a bug that renders some
+            #   spell/relic/equipment runes unable to be traded in. we will check for this later)
+            if type is not constants.TYPE_CHAMPION or 'No' in str(
+                    trade_in_soup(text=re.compile(constants.REGEX_IN_DECK))[0]):
                 # if it's a champion rune, don't trade in unless it's level 1
                 if type is not constants.TYPE_CHAMPION or int(
                         trade_in_soup.find(id=constants.NAME_RUNE_LEVEL).string) < 3:
@@ -526,16 +525,16 @@ def do_trade_in(baseId, type, file=None):
                         gained = trade_in_token_result['balance'] - current_balance
                         current_balance = trade_in_token_result['balance']
                         if file is not None:
-                            file.write(constants.NOTIF_SUCCESS_TRADE_IN.format(type, str(baseId), str(gained))+'\n')
+                            file.write(constants.NOTIF_SUCCESS_TRADE_IN.format(type, str(baseId), str(gained)) + '\n')
                         return
                     elif trade_in_token_result['status'] is -2:
                         # spell/relic/equipment is all in deck
+                        # this can occur even if keep value is gte to 2, due to a bug in the forge
                         raise RunesmithSREInDeck
                     else:
                         raise RunesmithSacrificeFailed(message='Returned JSON did not have success.')
-                # current copy is a champion at level 3
-            # current copy is in a deck
-            # try to find the next link (only applicable for champions)
+                        # current copy is a champion at level 3
+            # current copy is in a deck, try to find the next link (only applicable for champions)
             if type is not constants.TYPE_CHAMPION:
                 # there are no more runes to consider
                 raise RunesmithNotEnoughToTrade
@@ -561,8 +560,8 @@ def calculate_net_worth(mult_factor=1, add_factor=0):
                                               pd.merge(r_data, p_r_data, on=['baseId', 'runetype'], sort=False),
                                               pd.merge(e_data, p_e_data, on=['baseId', 'runetype'], sort=False), ]),
                            on=['baseId', 'runetype'], sort=False)
-    merged_data['totrade'] = np.floor(np.maximum(np.zeros(len(merged_data.index)),
-                                        merged_data['count'] - (merged_data['keep'] * mult_factor + add_factor)))
+    merged_data['totrade'] = np.floor(np.maximum(np.zeros(len(merged_data.index)), merged_data['count'] - (
+    merged_data['keep'] * mult_factor + add_factor)))
     merged_data['worth'] = merged_data['in'] * merged_data['totrade']
     if mult_factor is 1 and add_factor is 0:
         # only print out the CSV for unmodified keep values
@@ -582,14 +581,14 @@ def do_trade_in_batch():
     global current_balance
     query_forge()
     starting_balance = current_balance
-    merged_data = calculate_net_worth(1,0)
+    merged_data = calculate_net_worth(1, 0)
     traded = 0
-    with open(constants.FILE_TRADE_IN_LOG.format(str(int(time.time()))),'w') as log:
+    with open(constants.FILE_TRADE_IN_LOG.format(str(int(time.time()))), 'w') as log:
         for index, row in merged_data.iterrows():
             to_trade = int(row['totrade'])
             for counter in range(to_trade):
                 try:
-                    do_trade_in(row['baseId'],row['runetype'],log)
+                    do_trade_in(row['baseId'], row['runetype'], log)
                 except RunesmithNotEnoughToTrade:
                     continue
                 except RunesmithSREInDeck:
@@ -597,7 +596,8 @@ def do_trade_in_batch():
                 traded += 1
     query_forge()
     ending_balance = current_balance
-    print constants.NOTIF_SUCCES_TRADE_IN_BULK.format(traded,ending_balance-starting_balance)
-    fetch_data(False,True)
+    print constants.NOTIF_SUCCES_TRADE_IN_BULK.format(traded, ending_balance - starting_balance)
+    fetch_data(False, True)
+
 
 sess = session()

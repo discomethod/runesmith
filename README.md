@@ -18,8 +18,8 @@ Not yet - however, that may come in the future.
 See above on how to download the latest release. Once you've extracted all the files, you should in theory only need to run two commands to trade in all your runes:
 
 ```python
-import crawler
-crawler.do_login('my_username','my_password')
-crawler.do_trade_in_batch()
+import runesmith as rs
+rs.do_login('my_username','my_password')
+rs.do_trade_in_batch()
 ```
 Note that you will need to have Python 2.7 installed to run the current version. An executable version may be released in the future.

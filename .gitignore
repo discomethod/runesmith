@@ -3,6 +3,7 @@
 *_r.data
 *_e.data
 *_keep.data
+*_networth.csv
 .idea/
 
 # --- DEFAULT PYTHON .GITIGNORE --- #

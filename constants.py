@@ -58,10 +58,15 @@ TYPE_CHAMPION = 'c'
 TYPE_SPELL = 's'
 TYPE_RELIC = 'r'
 TYPE_EQUIPMENT = 'e'
-TYPE_RARITIES = ('Common','Uncommon','Rare','Exotic','','Legendary')
+TYPE_CHAMPION_VERBOSE = 'champion'
+TYPE_SPELL_VERBOSE = 'spell'
+TYPE_RELIC_VERBOSE = 'relic'
+TYPE_EQUIPMENT_VERBOSE = 'equipment'
+TYPE_RARITIES = ('Common', 'Uncommon', 'Rare', 'Exotic', '', 'Legendary')
 
-URL_DOFORGE = '/runes/do-forge.do?i={0}&t={1}&k={2}&a={3}&_={4}'  # url for performing rune sacrifice or forge
-                                                                # a is 0 to forge, 1 to sacrifice
+# url for performing rune sacrifice or forge
+# a is 0 to forge, 1 to sacrifice
+URL_DOFORGE = '/runes/do-forge.do?i={0}&t={1}&k={2}&a={3}&_={4}'
 URL_FETCHFORGE = '/runes/load-forge.do?m=forge&_={0}'  # url for fetching the forge page
 URL_LAUNCHFORGE = '/runes/launch-forge.do?m=forge&i={0}&t={1}'  # url for fetching rune data
 URL_LAUNCHFORGE_PAGE = '/runes/launch-forge.do?m=forge&i={0}&t={1}&p={2}'  # url for fetching page of rune data
@@ -78,3 +83,10 @@ VALUE_RARITY_UNCOMMON_KEEP = 2
 VALUE_RARITY_RARE_KEEP = 2
 VALUE_RARITY_EXOTIC_KEEP = 100
 VALUE_RARITY_LEGENDARY_KEEP = 100
+
+DICT_COLUMNS_DATA = dict(TYPE_CHAMPION=COLUMNS_C_DATA, TYPE_SPELL=COLUMNS_S_DATA, TYPE_RELIC=COLUMNS_S_DATA,
+                         TYPE_EQUIPMENT=COLUMNS_S_DATA)
+DICT_COLUMNS_P_DATA = dict(TYPE_CHAMPION=COLUMNS_P_C_DATA, TYPE_SPELL=COLUMNS_P_S_DATA, TYPE_RELIC=COLUMNS_P_S_DATA,
+                           TYPE_EQUIPMENT=COLUMNS_P_S_DATA)
+DICT_TYPE_VERBOSE = dict(TYPE_CHAMPION=TYPE_CHAMPION_VERBOSE, TYPE_SPELL=TYPE_SPELL_VERBOSE,
+                         TYPE_RELIC=TYPE_RELIC_VERBOSE, TYPE_EQUIPMENT=TYPE_EQUIPMENT_VERBOSE)

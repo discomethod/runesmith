@@ -16,6 +16,7 @@ import constants
 current_username = ''
 current_balance = 0
 
+
 # these data frames hold rune data in memory
 c_data = pd.DataFrame()
 s_data = pd.DataFrame()
@@ -534,7 +535,7 @@ def do_trade_in(baseId, type, file=None):
                     else:
                         raise RunesmithSacrificeFailed(message='Returned JSON did not have success.')
                         # current copy is a champion at level 3
-            # current copy is in a deck, try to find the next link (only applicable for champions)
+                # current copy is in a deck, try to find the next link (only applicable for champions)
             if type is not constants.TYPE_CHAMPION:
                 # there are no more runes to consider
                 raise RunesmithNotEnoughToTrade
@@ -543,7 +544,7 @@ def do_trade_in(baseId, type, file=None):
                 if constants.NAME_FORGE_LAST_RUNE in str(next_link_tag['class']):
                     # there are no more runes to consider
                     raise RunesmithNotEnoughToTrade
-                # there is still hope! get the next link
+                    # there is still hope! get the next link
                 trade_in_url = constants.POXNORA_URL + str(next_link_tag['href'])
         else:
             # there are not enough copies to keep
@@ -561,7 +562,7 @@ def calculate_net_worth(mult_factor=1, add_factor=0):
                                               pd.merge(e_data, p_e_data, on=['baseId', 'runetype'], sort=False), ]),
                            on=['baseId', 'runetype'], sort=False)
     merged_data['totrade'] = np.floor(np.maximum(np.zeros(len(merged_data.index)), merged_data['count'] - (
-    merged_data['keep'] * mult_factor + add_factor)))
+        merged_data['keep'] * mult_factor + add_factor)))
     merged_data['worth'] = merged_data['in'] * merged_data['totrade']
     if mult_factor is 1 and add_factor is 0:
         # only print out the CSV for unmodified keep values

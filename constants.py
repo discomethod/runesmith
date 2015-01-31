@@ -63,6 +63,7 @@ TYPE_CHAMPION = 'c'
 TYPE_SPELL = 's'
 TYPE_RELIC = 'r'
 TYPE_EQUIPMENT = 'e'
+# verbose names match Pox Nora json indices
 TYPE_CHAMPION_VERBOSE = 'champions'
 TYPE_SPELL_VERBOSE = 'spells'
 TYPE_RELIC_VERBOSE = 'relics'

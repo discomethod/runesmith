@@ -13,26 +13,6 @@ from requests import session
 
 import constants
 
-current_username = ''
-current_balance = 0
-
-
-# these data frames hold rune data in memory
-c_data = pd.DataFrame()
-s_data = pd.DataFrame()
-r_data = pd.DataFrame()
-e_data = pd.DataFrame()
-
-# these data frames hold personal collection data in memory
-p_c_data = pd.DataFrame()
-p_s_data = pd.DataFrame()
-p_r_data = pd.DataFrame()
-p_e_data = pd.DataFrame()
-
-# this data frame stores how many of each rune the player
-#   wants to keep
-p_keep = pd.DataFrame()
-
 # --- EXCEPTIONS --- #
 
 class PoxNoraMaintenanceError(Exception):
@@ -69,24 +49,6 @@ class RunesmithSREInDeck(Exception):
     pass
 
 # --- END EXCEPTIONS --- #
-
-# --- HELPER FUNCTIONS --- #
-
-def get_data_directory():
-    """Generates a path string for data files and ensures it exists.
-
-    """
-    # determine path for data directory
-    data_directory = join(getcwd(), constants.DIR_DATA)
-    # create directory if it does not exist
-    try:
-        makedirs(data_directory)
-    except OSError as e:
-        if e.errno is not errno.EEXIST:
-            raise
-    return data_directory
-
-# --- END HELPER FUNCTIONS --- #
 
 class SessionManager():
     def __init__(self, username):
@@ -341,9 +303,24 @@ class SessionManager():
         return True
 
 class StoreableDataFrame():
+
+    def get_data_directory(self):
+        """Generates a path string for data files and ensures it exists.
+
+        """
+        # determine path for data directory
+        data_directory = join(getcwd(), constants.DIR_DATA)
+        # create directory if it does not exist
+        try:
+            makedirs(data_directory)
+        except OSError as e:
+            if e.errno is not errno.EEXIST:
+                raise
+        return data_directory
+
     def load(self):
         # load data frame from file
-        data_directory = get_data_directory()
+        data_directory = self.get_data_directory()
         print constants.NOTIF_WRITING_P_DATA_FILES
         try:
             with open(join(data_directory, self.file_name), 'r') as f:
@@ -359,7 +336,7 @@ class StoreableDataFrame():
 
     def store(self):
         # store data frame into file
-        data_directory = get_data_directory()
+        data_directory = self.get_data_directory()
         print constants.NOTIF_WRITING_P_DATA_FILES
         try:
             with open(join(data_directory, self.file_name), 'w') as f:

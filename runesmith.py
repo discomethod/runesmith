@@ -168,7 +168,7 @@ class SessionManager(object):
 
         print constants.NOTIF_SUCCESS_LOGIN.format(self.username)
 
-        self.fetch_data(False, True)
+        self.fetch_data(constants.PERSONAL_PERSONAL)
 
     def do_trade_in(self, baseid, runetype, file=None):
         # try as best we can to trade in rune with baseid and runetype, while keeping in mind a few rules
@@ -258,7 +258,7 @@ class SessionManager(object):
 
     def fetch_data(self, personal):
         # fetch children data objects
-        for key, value in self.data[personal]:
+        for key, value in self.data[personal].iteritems():
             value.fetch(self)
 
     def get_rarity_list(self):
@@ -424,6 +424,8 @@ class KeepData(StoreableDataFrame):
 
 
 class PoxNoraData(StoreableDataFrame):
+    data = pd.DataFrame()
+
     def fetch(self, session_manager):
         raw_data = session_manager.query_forge()
         if raw_data is not None:
@@ -454,8 +456,8 @@ class PoxNoraData(StoreableDataFrame):
 
     def update(self, session_manager, raw_data):
         # update this GlobalData from raw_data
-
-        self.data[self.data_columns] = raw_data[self.data_columns]
+        raw_data_frame = pd.DataFrame.from_dict(raw_data[constants.DICT_TYPE_VERBOSE[self.runetype]])
+        self.data[self.data_columns] = raw_data_frame[self.data_columns]
         self.data['runetype'] = self.runetype
 
         if not self.personal:

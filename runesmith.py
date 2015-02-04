@@ -50,28 +50,57 @@ class RunesmithSREInDeck(Exception):
 
 # --- END EXCEPTIONS --- #
 
-class SessionManager():
+class SessionManager(object):
     def __init__(self, username):
         self.username = str(username)
         self.sess = session()
         self.balance = 0
         # indexes are self[personal][type]
+        """
         self.data = dict(zip([constants.PERSONAL_GLOBAL, constants.PERSONAL_PERSONAL]), [
             dict(zip([constants.TYPE_CHAMPION, constants.TYPE_SPELL, constants.TYPE_RELIC, constants.TYPE_EQUIPMENT]), [
-                PoxNoraData(name='global champion data', file_name=constants.FILE_C_DATA, runetype=constants.TYPE_CHAMPION),
-                PoxNoraData(name='global spell data', file_name=constants.FILE_S_DATA, runetype=constants.TYPE_SPELL),
-                PoxNoraData(name='global relic data', file_name=constants.FILE_R_DATA, runetype=constants.TYPE_RELIC),
+                PoxNoraData(name='global champion data', file_name=constants.FILE_C_DATA,
+                            runetype=constants.TYPE_CHAMPION, personal=constants.PERSONAL_GLOBAL),
+                PoxNoraData(name='global spell data', file_name=constants.FILE_S_DATA, runetype=constants.TYPE_SPELL,
+                            personal=constants.PERSONAL_GLOBAL),
+                PoxNoraData(name='global relic data', file_name=constants.FILE_R_DATA, runetype=constants.TYPE_RELIC,
+                            personal=constants.PERSONAL_GLOBAL),
                 PoxNoraData(name='global equipment data', file_name=constants.FILE_E_DATA,
-                            runetype=constants.TYPE_EQUIPMENT)]),
+                            runetype=constants.TYPE_EQUIPMENT, personal=constants.PERSONAL_GLOBAL)]),
             dict(zip([constants.TYPE_CHAMPION, constants.TYPE_SPELL, constants.TYPE_RELIC, constants.TYPE_EQUIPMENT])),
             [PoxNoraData(name='personal champion data', file_name=constants.FILE_P_C_DATA.format(self.username),
-                         runetype=constants.TYPE_CHAMPION),
+                         runetype=constants.TYPE_CHAMPION, personal=constants.PERSONAL_PERSONAL),
              PoxNoraData(name='personal spell data', file_name=constants.FILE_P_S_DATA.format(self.username),
-                         runetype=constants.TYPE_SPELL),
+                         runetype=constants.TYPE_SPELL, personal=constants.PERSONAL_PERSONAL),
              PoxNoraData(name='personal relic data', file_name=constants.FILE_P_R_DATA.format(self.username),
-                         runetype=constants.TYPE_RELIC),
+                         runetype=constants.TYPE_RELIC, personal=constants.PERSONAL_PERSONAL),
              PoxNoraData(name='personal equipment data', file_name=constants.FILE_P_E_DATA.format(self.username),
-                         runetype=constants.TYPE_EQUIPMENT)]])
+                         runetype=constants.TYPE_EQUIPMENT, personal=constants.PERSONAL_PERSONAL)]])
+                         """
+        self.data = { constants.PERSONAL_GLOBAL: {
+            constants.TYPE_CHAMPION: PoxNoraData(name='global champion data', file_name=constants.FILE_C_DATA,
+                                                 runetype=constants.TYPE_CHAMPION, personal=constants.PERSONAL_GLOBAL),
+            constants.TYPE_SPELL: PoxNoraData(name='global spell data', file_name=constants.FILE_S_DATA,
+                                              runetype=constants.TYPE_SPELL, personal=constants.PERSONAL_GLOBAL),
+            constants.TYPE_RELIC: PoxNoraData(name='global relic data', file_name=constants.FILE_R_DATA,
+                                              runetype=constants.TYPE_RELIC, personal=constants.PERSONAL_GLOBAL),
+            constants.TYPE_EQUIPMENT: PoxNoraData(name='global equipment data', file_name=constants.FILE_E_DATA,
+                                                  runetype=constants.TYPE_EQUIPMENT,
+                                                  personal=constants.PERSONAL_GLOBAL) }, constants.PERSONAL_PERSONAL: {
+            constants.TYPE_CHAMPION: PoxNoraData(name='personal champion data',
+                                                 file_name=constants.FILE_P_C_DATA.format(self.username),
+                                                 runetype=constants.TYPE_CHAMPION,
+                                                 personal=constants.PERSONAL_PERSONAL),
+            constants.TYPE_SPELL: PoxNoraData(name='personal spell data',
+                                              file_name=constants.FILE_P_S_DATA.format(self.username),
+                                              runetype=constants.TYPE_SPELL, personal=constants.PERSONAL_PERSONAL),
+            constants.TYPE_RELIC: PoxNoraData(name='personal relic data',
+                                              file_name=constants.FILE_P_R_DATA.format(self.username),
+                                              runetype=constants.TYPE_RELIC, personal=constants.PERSONAL_PERSONAL),
+            constants.TYPE_EQUIPMENT: PoxNoraData(name='personal equipment data',
+                                                  file_name=constants.FILE_P_E_DATA.format(self.username),
+                                                  runetype=constants.TYPE_EQUIPMENT,
+                                                  personal=constants.PERSONAL_PERSONAL) } }
         self.keep_data = KeepData(file_name=constants.FILE_P_KEEP.format(self.username), name='personal keep data')
         return
 
@@ -180,7 +209,8 @@ class SessionManager():
                             gained = trade_in_token_result['balance'] - self.balance
                             self.balance = trade_in_token_result['balance']
                             if file is not None:
-                                file.write(constants.NOTIF_SUCCESS_TRADE_IN.format(runetype, str(baseid), str(gained)) + '\n')
+                                file.write(
+                                    constants.NOTIF_SUCCESS_TRADE_IN.format(runetype, str(baseid), str(gained)) + '\n')
                             return
                         elif trade_in_token_result['status'] is -2:
                             # spell/relic/equipment is all in deck
@@ -302,8 +332,8 @@ class SessionManager():
         # TODO query login page to check if we're logged in
         return True
 
-class StoreableDataFrame():
 
+class StoreableDataFrame(object):
     def get_data_directory(self):
         """Generates a path string for data files and ensures it exists.
 
@@ -392,6 +422,7 @@ class KeepData(StoreableDataFrame):
             return False
         return True
 
+
 class PoxNoraData(StoreableDataFrame):
     def fetch(self, session_manager):
         raw_data = session_manager.query_forge()
@@ -434,7 +465,8 @@ class PoxNoraData(StoreableDataFrame):
             for index, row in raw_data.iterrows():
                 try:
                     sys.stdout.write(
-                        constants.NOTIF_FETCHING_RUNE.format(constants.DICT_TYPE_VERBOSE[self.runetype], index + 1, total))
+                        constants.NOTIF_FETCHING_RUNE.format(constants.DICT_TYPE_VERBOSE[self.runetype], index + 1,
+                                                             total))
                     sys.stdout.flush()
                     (this_in, this_out) = session_manager.query_nora_values(row['baseId'], self.runetype)
                 except PoxNoraMaintenanceError:
@@ -446,7 +478,7 @@ class PoxNoraData(StoreableDataFrame):
             self.data['out'] = my_out
 
     def __init__(self, name, file_name, personal, runetype):
-        super.__init__(name, file_name)
+        super(PoxNoraData, self).__init__(name=name, file_name=file_name)
         self.personal = personal
         self.runetype = runetype
         self.data_columns = constants.DICT_COLUMNS_DATA[self.personal][self.runetype]

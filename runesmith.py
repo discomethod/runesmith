@@ -5,6 +5,7 @@ import sys
 import time
 from os import getcwd, makedirs
 from os.path import join
+import datetime
 
 import numpy as np
 import pandas as pd
@@ -56,27 +57,6 @@ class SessionManager(object):
         self.sess = session()
         self.balance = 0
         # indexes are self[personal][type]
-        """
-        self.data = dict(zip([constants.PERSONAL_GLOBAL, constants.PERSONAL_PERSONAL]), [
-            dict(zip([constants.TYPE_CHAMPION, constants.TYPE_SPELL, constants.TYPE_RELIC, constants.TYPE_EQUIPMENT]), [
-                PoxNoraData(name='global champion data', file_name=constants.FILE_C_DATA,
-                            runetype=constants.TYPE_CHAMPION, personal=constants.PERSONAL_GLOBAL),
-                PoxNoraData(name='global spell data', file_name=constants.FILE_S_DATA, runetype=constants.TYPE_SPELL,
-                            personal=constants.PERSONAL_GLOBAL),
-                PoxNoraData(name='global relic data', file_name=constants.FILE_R_DATA, runetype=constants.TYPE_RELIC,
-                            personal=constants.PERSONAL_GLOBAL),
-                PoxNoraData(name='global equipment data', file_name=constants.FILE_E_DATA,
-                            runetype=constants.TYPE_EQUIPMENT, personal=constants.PERSONAL_GLOBAL)]),
-            dict(zip([constants.TYPE_CHAMPION, constants.TYPE_SPELL, constants.TYPE_RELIC, constants.TYPE_EQUIPMENT])),
-            [PoxNoraData(name='personal champion data', file_name=constants.FILE_P_C_DATA.format(self.username),
-                         runetype=constants.TYPE_CHAMPION, personal=constants.PERSONAL_PERSONAL),
-             PoxNoraData(name='personal spell data', file_name=constants.FILE_P_S_DATA.format(self.username),
-                         runetype=constants.TYPE_SPELL, personal=constants.PERSONAL_PERSONAL),
-             PoxNoraData(name='personal relic data', file_name=constants.FILE_P_R_DATA.format(self.username),
-                         runetype=constants.TYPE_RELIC, personal=constants.PERSONAL_PERSONAL),
-             PoxNoraData(name='personal equipment data', file_name=constants.FILE_P_E_DATA.format(self.username),
-                         runetype=constants.TYPE_EQUIPMENT, personal=constants.PERSONAL_PERSONAL)]])
-                         """
         self.dfs = { constants.PERSONAL_GLOBAL: {
             constants.TYPE_CHAMPION: PoxNoraData(name='global champion data', file_name=constants.FILE_C_DATA,
                                                  runetype=constants.TYPE_CHAMPION, personal=constants.PERSONAL_GLOBAL),
@@ -240,7 +220,8 @@ class SessionManager(object):
         starting_balance = self.balance
         merged_data = self.calculate_net_worth(1, 0)
         traded = 0
-        with open(constants.FILE_TRADE_IN_LOG.format(str(int(time.time()))), 'w') as log:
+        now = datetime.datetime.now()
+        with open(constants.FILE_TRADE_IN_LOG.format(now.strftime(constants.FORMAT_NUMSTR_TIME)), 'w') as log:
             for index, row in merged_data.iterrows():
                 to_trade = int(row['totrade'])
                 for counter in range(to_trade):

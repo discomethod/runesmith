@@ -7,6 +7,16 @@ COLUMNS_P_S_DATA = ['baseId', 'count', ]  # column names to copy for personal sp
 
 DIR_DATA = 'data'  # directory name to store data in
 
+ERROR_DATA_FILES_READ = 'Could not find saved data files.'
+ERROR_DATA_FILES_WRITE = 'Could not open data files for write.'
+ERROR_FILE_PERMISSION_DENIED = 'Could not open file - permission denied. Check that it is not in use by another program.'
+ERROR_LOGIN_FAIL = 'Could not log in to Pox Nora as user {0}. Please check your username and password and try again.'
+ERROR_PARSE_FORGE = 'Could not obtain collection data.'
+ERROR_POXNORA_MAINTENANCE = 'Pox Nora website is currently down for maintenance.'
+ERROR_RARITY_UNDEFINED = 'Could not determine the rarity of the rune. Please submit an error report.'
+ERROR_RUNE_DATA_NOT_FOUND = 'Rune data was not properly initialized.'
+ERROR_RUNESMITH_KEEP_VALUE_NOT_DEFINED = 'Could not find a keep value associated with rune {0}, type {1}.'
+
 FILE_C_DATA = 'globalc.data'
 FILE_S_DATA = 'globals.data'
 FILE_R_DATA = 'globalr.data'
@@ -19,15 +29,7 @@ FILE_P_E_DATA = '{0}_e.data'
 FILE_P_KEEP = '{}_keep.data'
 FILE_TRADE_IN_LOG = 'trade_in_{}.log'
 
-ERROR_DATA_FILES_READ = 'Could not find saved data files.'
-ERROR_DATA_FILES_WRITE = 'Could not open data files for write.'
-ERROR_FILE_PERMISSION_DENIED = 'Could not open file - permission denied. Check that it is not in use by another program.'
-ERROR_LOGIN_FAIL = 'Could not log in to Pox Nora as user {0}. Please check your username and password and try again.'
-ERROR_PARSE_FORGE = 'Could not obtain collection data.'
-ERROR_POXNORA_MAINTENANCE = 'Pox Nora website is currently down for maintenance.'
-ERROR_RARITY_UNDEFINED = 'Could not determine the rarity of the rune. Please submit an error report.'
-ERROR_RUNE_DATA_NOT_FOUND = 'Rune data was not properly initialized.'
-ERROR_RUNESMITH_KEEP_VALUE_NOT_DEFINED = 'Could not find a keep value associated with rune {0}, type {1}.'
+FORMAT_NUMSTR_TIME = '%Y%m%d%H%M'
 
 NAME_FORGE_BALANCE = 'balance'  # name of forge JSON element that contains balance
 NAME_LOGINFORM = 'loginForm'  # name of login form element

@@ -42,6 +42,7 @@ NAME_RUNE_LEVEL = 'rune-level'  # name of the element that stores champion level
 NAME_SACRIFICE = 'sacrifice-link'  # name of the element that stores the sacrifice ID
 NAME_SACRIFICE_ATTRIBUTE = 'data-id'  # name of the relavent attribute of the sacrifice element
 
+NOTIF_DISPLAY_NET_WORTH = 'Trading in all excess runes on your account should yield {0} nora.'
 NOTIF_FETCHING_RUNE = 'Fetching {0} {1:0>4d}/{2:0>4d}\r'
 NOTIF_LOADING_DATA_FILES = 'Reading in rune data files...'
 NOTIF_LOADING_P_DATA_FILES = 'Reading in personal data files...'
@@ -49,7 +50,7 @@ NOTIF_PERFORMING_DATA_UPDATE = 'Updating rune data...'
 NOTIF_PERFORMING_FULL_UPDATE = 'Updating rune data and personal collection...'
 NOTIF_PERFORMING_P_DATA_UPDATE = 'Updating personal collection...'
 NOTIF_SUCCESS_LOGIN = 'Welcome to Runesmith, {0}!'
-NOTIF_SUCCESS_TRADE_IN = 'Sacrificed a {0} ({1} {2}) rune, earning {3} nora.'
+NOTIF_SUCCESS_TRADE_IN = 'Sacrificed {0} ({1} {2}) rune, earning {3} nora.'
 NOTIF_SUCCESS_TRADE_IN_BULK = 'Traded in {0} runes, earning {1} nora.'
 NOTIF_WRITING_DATA_FILES = 'Writing rune data files...'
 NOTIF_WRITING_P_DATA_FILES = 'Writing personal data files...'

@@ -113,6 +113,10 @@ class SessionManager(object):
     def call_get_keep(self, baseid, runetype):
         return self.keep_data.get_keep(baseid, runetype)
 
+    def display_net_worth(self):
+        merged_data = self.calculate_net_worth(1,0)
+        print constants.NOTIF_DISPLAY_NET_WORTH.format(np.sum(merged_data['worth']))
+
     def do_login(self, password):
         # make a request to the login screen
         login_request = self.sess.get(constants.POXNORA_URL + constants.URL_LOGIN)

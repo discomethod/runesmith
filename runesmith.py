@@ -77,7 +77,7 @@ class SessionManager(object):
              PoxNoraData(name='personal equipment data', file_name=constants.FILE_P_E_DATA.format(self.username),
                          runetype=constants.TYPE_EQUIPMENT, personal=constants.PERSONAL_PERSONAL)]])
                          """
-        self.data = { constants.PERSONAL_GLOBAL: {
+        self.dfs = { constants.PERSONAL_GLOBAL: {
             constants.TYPE_CHAMPION: PoxNoraData(name='global champion data', file_name=constants.FILE_C_DATA,
                                                  runetype=constants.TYPE_CHAMPION, personal=constants.PERSONAL_GLOBAL),
             constants.TYPE_SPELL: PoxNoraData(name='global spell data', file_name=constants.FILE_S_DATA,
@@ -110,11 +110,11 @@ class SessionManager(object):
             self.load_data(personal)
         self.keep_data.load()
         merged_data = pd.DataFrame()
-        for type in constants.LIST_TYPES:
-            merged_data.append(
-                self.data[constants.PERSONAL_GLOBAL][type].merge(self.data[constants.PERSONAL_PERSONAL][type],
+        for runetype in constants.LIST_TYPES:
+            merged_data = merged_data.append(
+                self.dfs[constants.PERSONAL_GLOBAL][runetype].df.merge(self.dfs[constants.PERSONAL_PERSONAL][runetype].df,
                                                                  on=['baseId', 'runetype'], sort=False))
-        merged_data.merge(self.keep_data, on=['baseId', 'runetype'], sort=False)
+        merged_data = merged_data.merge(self.keep_data.df, on=['baseId', 'runetype'], sort=False)
         merged_data['totrade'] = np.floor(np.maximum(np.zeros(len(merged_data.index)), merged_data['count'] - (
             merged_data['keep'] * mult_factor + add_factor)))
         merged_data['worth'] = merged_data['in'] * merged_data['totrade']
@@ -258,7 +258,7 @@ class SessionManager(object):
 
     def fetch_data(self, personal):
         # fetch children data objects
-        for key, value in self.data[personal].iteritems():
+        for key, value in self.dfs[personal].iteritems():
             value.fetch(self)
 
     def get_rarity_list(self):
@@ -266,7 +266,7 @@ class SessionManager(object):
         my_runetype = []
         my_rarity = []
         for type in constants.LIST_TYPES:
-            for index, row in self.data[constants.PERSONAL_PERSONAL][type].iterrows():
+            for index, row in self.dfs[constants.PERSONAL_PERSONAL][type].df.iterrows():
                 my_baseid.append(row['baseId'])
                 my_runetype.append(type)
                 my_rarity.append(row['rarity'])
@@ -277,7 +277,7 @@ class SessionManager(object):
         return rarity_list
 
     def load_data(self, personal):
-        for key, value in self.data[personal]:
+        for key, value in self.dfs[personal].iteritems():
             value.smart_load(self)
 
     def parse_poxnora_page(self, html):
@@ -354,14 +354,14 @@ class StoreableDataFrame(object):
         print constants.NOTIF_WRITING_P_DATA_FILES
         try:
             with open(join(data_directory, self.file_name), 'r') as f:
-                self.data = pickle.load(f)
+                self.df = pickle.load(f)
         except IOError:
             # couldn't open files
             print constants.ERROR_DATA_FILES_READ
         self.loaded = True
 
     def smart_load(self):
-        if len(self.data.index) < 1:
+        if len(self.df.index) < 1:
             self.load()
 
     def store(self):
@@ -370,7 +370,7 @@ class StoreableDataFrame(object):
         print constants.NOTIF_WRITING_P_DATA_FILES
         try:
             with open(join(data_directory, self.file_name), 'w') as f:
-                pickle.dump(self.data, f)
+                pickle.dump(self.df, f)
         except IOError:
             # couldn't open files
             print constants.ERROR_DATA_FILES_WRITE
@@ -378,12 +378,12 @@ class StoreableDataFrame(object):
     def __init__(self, name, file_name):
         self.name = name
         self.file_name = file_name
-        self.data = pd.DataFrame()
+        self.df = pd.DataFrame()
 
 
 class KeepData(StoreableDataFrame):
     @staticmethod
-    def get_default_keep(self, rarity):
+    def get_default_keep(rarity):
         try:
             return constants.DICT_RARITY[rarity]
         except IndexError:
@@ -392,7 +392,7 @@ class KeepData(StoreableDataFrame):
     def get_keep(self, baseid, runetype):
         # get the number to keep for a specific rune
         try:
-            filtered = self.data[self.data['baseId'] == baseid]
+            filtered = self.df[self.df['baseId'] == baseid]
             filtered_row = filtered[filtered['runetype'] == runetype].index[0]
         except Exception:
             raise RunesmithNoKeepValueDefined(constants.ERROR_RUNESMITH_KEEP_VALUE_NOT_DEFINED.format(baseid, runetype))
@@ -406,9 +406,9 @@ class KeepData(StoreableDataFrame):
             todo_index.append(row['baseId'])
             todo_keep.append(self.get_default_keep(row['rarity']))
             todo_type.append(row['runetype'])
-        self.data['baseId'] = todo_index
-        self.data['keep'] = todo_keep
-        self.data['runetype'] = todo_type
+        self.df['baseId'] = todo_index
+        self.df['keep'] = todo_keep
+        self.df['runetype'] = todo_type
         self.store()
 
     def refresh(self):
@@ -424,7 +424,6 @@ class KeepData(StoreableDataFrame):
 
 
 class PoxNoraData(StoreableDataFrame):
-    data = pd.DataFrame()
 
     def fetch(self, session_manager):
         raw_data = session_manager.query_forge()
@@ -451,14 +450,14 @@ class PoxNoraData(StoreableDataFrame):
                 raise
 
     def smart_load(self, session_manager=None):
-        if len(self.data.index) < 1:
+        if len(self.df.index) < 1:
             self.refresh(session_manager)
 
     def update(self, session_manager, raw_data):
         # update this GlobalData from raw_data
         raw_data_frame = pd.DataFrame.from_dict(raw_data[constants.DICT_TYPE_VERBOSE[self.runetype]])
-        self.data[self.data_columns] = raw_data_frame[self.data_columns]
-        self.data['runetype'] = self.runetype
+        self.df[self.data_columns] = raw_data_frame[self.data_columns]
+        self.df['runetype'] = self.runetype
 
         if not self.personal:
             total = len(raw_data.index)
@@ -476,8 +475,8 @@ class PoxNoraData(StoreableDataFrame):
                 my_in.append(this_in)
                 my_out.append(this_out)
             sys.stdout.write('\n')
-            self.data['in'] = my_in
-            self.data['out'] = my_out
+            self.df['in'] = my_in
+            self.df['out'] = my_out
 
     def __init__(self, name, file_name, personal, runetype):
         super(PoxNoraData, self).__init__(name=name, file_name=file_name)

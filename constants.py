@@ -43,11 +43,13 @@ NAME_SACRIFICE = 'sacrifice-link'  # name of the element that stores the sacrifi
 NAME_SACRIFICE_ATTRIBUTE = 'data-id'  # name of the relavent attribute of the sacrifice element
 
 NOTIF_FETCHING_RUNE = 'Fetching {0} {1:0>4d}/{2:0>4d}\r'
+NOTIF_LOADING_DATA_FILES = 'Reading in rune data files...'
+NOTIF_LOADING_P_DATA_FILES = 'Reading in personal data files...'
 NOTIF_PERFORMING_DATA_UPDATE = 'Updating rune data...'
 NOTIF_PERFORMING_FULL_UPDATE = 'Updating rune data and personal collection...'
 NOTIF_PERFORMING_P_DATA_UPDATE = 'Updating personal collection...'
 NOTIF_SUCCESS_LOGIN = 'Welcome to Runesmith, {0}!'
-NOTIF_SUCCESS_TRADE_IN = 'Sacrificed {0}-{1} rune, earning {2} nora.'
+NOTIF_SUCCESS_TRADE_IN = 'Sacrificed a {0} ({1} {2}) rune, earning {3} nora.'
 NOTIF_SUCCESS_TRADE_IN_BULK = 'Traded in {0} runes, earning {1} nora.'
 NOTIF_WRITING_DATA_FILES = 'Writing rune data files...'
 NOTIF_WRITING_P_DATA_FILES = 'Writing personal data files...'
@@ -97,6 +99,9 @@ DICT_COLUMNS_DATA = {
                        TYPE_EQUIPMENT: COLUMNS_S_DATA },
     PERSONAL_PERSONAL: { TYPE_CHAMPION: COLUMNS_P_C_DATA, TYPE_SPELL: COLUMNS_P_S_DATA, TYPE_RELIC: COLUMNS_P_S_DATA,
                          TYPE_EQUIPMENT: COLUMNS_P_S_DATA } }
+DICT_DATA_READ = { PERSONAL_GLOBAL: NOTIF_LOADING_DATA_FILES, PERSONAL_PERSONAL: NOTIF_LOADING_P_DATA_FILES }
+DICT_DATA_WRITE = { PERSONAL_GLOBAL: NOTIF_WRITING_DATA_FILES, PERSONAL_PERSONAL: NOTIF_WRITING_P_DATA_FILES,
+                    'keep': NOTIF_WRITING_P_PREFERENCES_FILE }
 DICT_RARITY = { RARITY_COMMON: RARITY_COMMON_KEEP, RARITY_UNCOMMON: RARITY_UNCOMMON_KEEP, RARITY_RARE: RARITY_RARE_KEEP,
                 RARITY_EXOTIC: RARITY_EXOTIC_KEEP, RARITY_LEGENDARY: RARITY_LEGENDARY_KEEP, }
 DICT_TYPE_VERBOSE = { TYPE_CHAMPION: TYPE_CHAMPION_VERBOSE, TYPE_SPELL: TYPE_SPELL_VERBOSE,

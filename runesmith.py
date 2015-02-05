@@ -91,9 +91,8 @@ class SessionManager(object):
         self.keep_data.load()
         merged_data = pd.DataFrame()
         for runetype in constants.LIST_TYPES:
-            merged_data = merged_data.append(
-                self.dfs[constants.PERSONAL_GLOBAL][runetype].df.merge(self.dfs[constants.PERSONAL_PERSONAL][runetype].df,
-                                                                 on=['baseId', 'runetype'], sort=False))
+            merged_data = merged_data.append(self.dfs[constants.PERSONAL_GLOBAL][runetype].df.merge(
+                self.dfs[constants.PERSONAL_PERSONAL][runetype].df, on=['baseId', 'runetype'], sort=False))
         merged_data = merged_data.merge(self.keep_data.df, on=['baseId', 'runetype'], sort=False)
         merged_data['totrade'] = np.floor(np.maximum(np.zeros(len(merged_data.index)), merged_data['count'] - (
             merged_data['keep'] * mult_factor + add_factor)))
@@ -150,15 +149,16 @@ class SessionManager(object):
 
         self.fetch_data(constants.PERSONAL_PERSONAL)
 
-    def do_trade_in(self, baseid, runetype, file=None):
-        # try as best we can to trade in rune with baseid and runetype, while keeping in mind a few rules
+    def do_trade_in(self, runerow, file=None):
+        # try as best we can to trade in rune with described by the merged_data row runerow, while following a few rules
         # don't try to trade things that are in decks
         # don't trade champions that are level 3
         # don't trade below the keep value
         traded = False
-        trade_in_url = constants.POXNORA_URL + constants.URL_LAUNCHFORGE.format(str(baseid), runetype)
+        trade_in_url = constants.POXNORA_URL + constants.URL_LAUNCHFORGE.format(str(runerow['baseId']),
+                                                                                runerow['runetype'])
         try:
-            copies_to_keep = self.call_get_keep(baseid, runetype)
+            copies_to_keep = self.call_get_keep(runerow['baseId'], runerow['runetype'])
         except RunesmithNoKeepValueDefined:
             raise
         while not traded:
@@ -172,25 +172,29 @@ class SessionManager(object):
             if copies_owned > copies_to_keep:
                 # check if a champion rune is in a deck (note that the rune forge has a bug that renders some
                 #   spell/relic/equipment runes unable to be traded in. we will check for this later)
-                if runetype is not constants.TYPE_CHAMPION or 'No' in str(
+                if runerow['runetype'] is not constants.TYPE_CHAMPION or 'No' in str(
                         trade_in_soup(text=re.compile(constants.REGEX_IN_DECK))[0]):
                     # if it's a champion rune, don't trade in unless it's level 1
-                    if runetype is not constants.TYPE_CHAMPION or int(
+                    if runerow['runetype'] is not constants.TYPE_CHAMPION or int(
                             trade_in_soup.find(id=constants.NAME_RUNE_LEVEL).string) < 3:
                         sacrifice_id = str(
                             trade_in_soup.find(id=constants.NAME_SACRIFICE)[constants.NAME_SACRIFICE_ATTRIBUTE])
                         token = str(re.search(constants.REGEX_DOFORGE, trade_in_soup.get_text()).groups()[0])
                         trade_in_token_request = self.sess.get(
-                            constants.POXNORA_URL + constants.URL_DOFORGE.format(sacrifice_id, runetype, token, '1',
-                                                                                 str(int(time.time()))))
+                            constants.POXNORA_URL + constants.URL_DOFORGE.format(sacrifice_id, runerow['runetype'],
+                                                                                 token, '1', str(int(time.time()))))
                         trade_in_token_result = trade_in_token_request.json()
                         if trade_in_token_result['status'] is 1:
                             # yay it worked
                             gained = trade_in_token_result['balance'] - self.balance
                             self.balance = trade_in_token_result['balance']
                             if file is not None:
-                                file.write(
-                                    constants.NOTIF_SUCCESS_TRADE_IN.format(runetype, str(baseid), str(gained)) + '\n')
+                                file.write(constants.NOTIF_SUCCESS_TRADE_IN.format(runerow['name'],
+                                                                                   constants.TYPE_RARITIES[
+                                                                                       runerow['rarity']],
+                                                                                   constants.DICT_TYPE_VERBOSE[
+                                                                                       runerow['runetype']],
+                                                                                   str(gained)) + '\n')
                             return
                         elif trade_in_token_result['status'] is -2:
                             # spell/relic/equipment is all in deck
@@ -200,7 +204,7 @@ class SessionManager(object):
                             raise RunesmithSacrificeFailed(message='Returned JSON did not have success.')
                             # current copy is a champion at level 3
                             # current copy is in a deck, try to find the next link (only applicable for champions)
-                if runetype is not constants.TYPE_CHAMPION:
+                if runerow['runetype'] is not constants.TYPE_CHAMPION:
                     # there are no more runes to consider
                     raise RunesmithNotEnoughToTrade
                 else:
@@ -226,7 +230,7 @@ class SessionManager(object):
                 to_trade = int(row['totrade'])
                 for counter in range(to_trade):
                     try:
-                        self.do_trade_in(row['baseId'], row['runetype'], log)
+                        self.do_trade_in(row, log)
                     except RunesmithNotEnoughToTrade:
                         continue
                     except RunesmithSREInDeck:
@@ -332,7 +336,6 @@ class StoreableDataFrame(object):
     def load(self):
         # load data frame from file
         data_directory = self.get_data_directory()
-        print constants.NOTIF_WRITING_P_DATA_FILES
         try:
             with open(join(data_directory, self.file_name), 'r') as f:
                 self.df = pickle.load(f)
@@ -348,7 +351,6 @@ class StoreableDataFrame(object):
     def store(self):
         # store data frame into file
         data_directory = self.get_data_directory()
-        print constants.NOTIF_WRITING_P_DATA_FILES
         try:
             with open(join(data_directory, self.file_name), 'w') as f:
                 pickle.dump(self.df, f)
@@ -405,7 +407,6 @@ class KeepData(StoreableDataFrame):
 
 
 class PoxNoraData(StoreableDataFrame):
-
     def fetch(self, session_manager):
         raw_data = session_manager.query_forge()
         if raw_data is not None:
@@ -418,6 +419,10 @@ class PoxNoraData(StoreableDataFrame):
             print constants.ERROR_PARSE_FORGE
             return False
 
+    def load(self):
+        print constants.DICT_DATA_READ[self.personal]
+        super(PoxNoraData, self).load()
+
     def refresh(self, session_manager):
         # load global data into memory, regardless of current status
         # try to read it from the file first
@@ -429,6 +434,10 @@ class PoxNoraData(StoreableDataFrame):
                 self.fetch(session_manager=session_manager)
             except PoxNoraMaintenanceError:
                 raise
+
+    def store(self):
+        print constants.DICT_DATA_WRITE[self.personal]
+        super(PoxNoraData, self).store()
 
     def smart_load(self, session_manager=None):
         if len(self.df.index) < 1:

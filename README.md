@@ -15,11 +15,6 @@ Runesmith is a lot faster and easier. If you have loads of commons and uncommons
 ##### Can I use runesmith to forge myself 2 of every common?
 Not yet - however, that may come in the future.
 ##### How do I use runesmith?
-See above on how to download the latest release. Once you've extracted all the files, you should in theory only need to run two commands to trade in all your runes:
+The best way to run runesmith is to download a copy of the latest release (see above on how to download the latest release). Then, follow the instructions given on the release page.
 
-```python
-import runesmith as rs
-rs.do_login('my_username','my_password')
-rs.do_trade_in_batch()
-```
-Note that you will need to have Python 2.7 installed to run the current version. An executable version may be released in the future.
+Note that you will need to have Python 2.7 and all dependencies installed to run the current version. An executable version may be released in the future.

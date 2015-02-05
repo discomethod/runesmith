@@ -5,7 +5,7 @@ import sys
 import time
 from os import getcwd, makedirs
 from os.path import join
-import datetime
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -228,7 +228,7 @@ class SessionManager(object):
         starting_balance = self.balance
         merged_data = self.calculate_net_worth(1, 0)
         traded = 0
-        now = datetime.datetime.now()
+        now = datetime.now()
         with open(constants.FILE_TRADE_IN_LOG.format(now.strftime(constants.FORMAT_NUMSTR_TIME)), 'w') as log:
             for index, row in merged_data.iterrows():
                 to_trade = int(row['totrade'])

@@ -89,11 +89,11 @@ RARITY_UNCOMMON = 1
 RARITY_RARE = 2
 RARITY_EXOTIC = 3
 RARITY_LEGENDARY = 5
-RARITY_COMMON_KEEP = 2
-RARITY_UNCOMMON_KEEP = 2
-RARITY_RARE_KEEP = 2
-RARITY_EXOTIC_KEEP = 100
-RARITY_LEGENDARY_KEEP = 100
+RARITY_COMMON_KEEP = 2 # default number of common runes to keep
+RARITY_UNCOMMON_KEEP = 2 # default number of uncommon runes to keep
+RARITY_RARE_KEEP = 2 # default number of rare runes to keep
+RARITY_EXOTIC_KEEP = 100 # default number of exotic runes to keep
+RARITY_LEGENDARY_KEEP = 100 # default number of legendary runes to keep
 
 DICT_COLUMNS_DATA = {
     PERSONAL_GLOBAL: { TYPE_CHAMPION: COLUMNS_C_DATA, TYPE_SPELL: COLUMNS_S_DATA, TYPE_RELIC: COLUMNS_S_DATA,

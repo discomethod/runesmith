@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup as bsoup
 from requests import session
 
 import constants
+import settings
 
 # --- EXCEPTIONS --- #
 
@@ -180,7 +181,7 @@ class SessionManager(object):
                         trade_in_soup(text=re.compile(constants.REGEX_IN_DECK))[0]):
                     # if it's a champion rune, don't trade in unless it's level 1
                     if runerow['runetype'] is not constants.TYPE_CHAMPION or int(
-                            trade_in_soup.find(id=constants.NAME_RUNE_LEVEL).string) < 3:
+                            trade_in_soup.find(id=constants.NAME_RUNE_LEVEL).string) < settings.LEVEL_TO_KEEP:
                         sacrifice_id = str(
                             trade_in_soup.find(id=constants.NAME_SACRIFICE)[constants.NAME_SACRIFICE_ATTRIBUTE])
                         token = str(re.search(constants.REGEX_DOFORGE, trade_in_soup.get_text()).groups()[0])

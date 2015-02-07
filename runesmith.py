@@ -177,10 +177,10 @@ class SessionManager(object):
             if copies_owned > copies_to_keep:
                 # check if a champion rune is in a deck (note that the rune forge has a bug that renders some
                 #   spell/relic/equipment runes unable to be traded in. we will check for this later)
-                if runerow['runetype'] is not constants.TYPE_CHAMPION or 'No' in str(
+                if runerow['runetype'] != constants.TYPE_CHAMPION or 'No' in str(
                         trade_in_soup(text=re.compile(constants.REGEX_IN_DECK))[0]):
                     # if it's a champion rune, don't trade in unless it's level 1
-                    if runerow['runetype'] is not constants.TYPE_CHAMPION or int(
+                    if runerow['runetype'] != constants.TYPE_CHAMPION or int(
                             trade_in_soup.find(id=constants.NAME_RUNE_LEVEL).string) < settings.LEVEL_TO_KEEP:
                         sacrifice_id = str(
                             trade_in_soup.find(id=constants.NAME_SACRIFICE)[constants.NAME_SACRIFICE_ATTRIBUTE])
@@ -207,9 +207,9 @@ class SessionManager(object):
                             raise RunesmithSREInDeck
                         else:
                             raise RunesmithSacrificeFailed(message='Returned JSON did not have success.')
-                            # current copy is a champion at level 3
-                            # current copy is in a deck, try to find the next link (only applicable for champions)
-                if runerow['runetype'] is not constants.TYPE_CHAMPION:
+                # current copy is a champion at level 3
+                # current copy is in a deck, try to find the next link (only applicable for champions)
+                if runerow['runetype'] != constants.TYPE_CHAMPION:
                     # there are no more runes to consider
                     raise RunesmithNotEnoughToTrade
                 else:
@@ -237,8 +237,10 @@ class SessionManager(object):
                     try:
                         self.do_trade_in(row, log)
                     except RunesmithNotEnoughToTrade:
+                        print constants.ERROR_NOT_ENOUGH_TRADE.format(row['name'])
                         continue
                     except RunesmithSREInDeck:
+                        print constants.ERROR_SRE.format(row['name'], int(row['totrade']))
                         continue
                     traded += 1
         self.query_forge(update_balance=True)

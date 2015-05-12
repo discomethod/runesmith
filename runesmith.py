@@ -258,7 +258,7 @@ class SessionManager(object):
         my_runetype = []
         my_rarity = []
         for type in constants.LIST_TYPES:
-            for index, row in self.dfs[constants.PERSONAL_PERSONAL][type].df.iterrows():
+            for index, row in self.dfs[constants.PERSONAL_GLOBAL][type].df.iterrows():
                 my_baseid.append(row['baseId'])
                 my_runetype.append(type)
                 my_rarity.append(row['rarity'])
@@ -320,9 +320,24 @@ class SessionManager(object):
             nora_values.append(int(item.text))
         return nora_values[0], nora_values[2]
 
+    def query_page(self, to_visit):
+        # use the current session to query a page and save the html
+        query_request = self.sess.get(to_visit)
+        try:
+            query_soup = self.parse_poxnora_page(query_request.text)
+        except:
+            raise PoxNoraMaintenanceError
+        with open('temp.html', 'w') as f:
+            f.write(query_soup.prettify())
+
     def verify_logged_in(self):
         # TODO query login page to check if we're logged in
-        return True
+        query_request = self.sess.get(constants.POXNORA_URL)
+        try:
+            query_soup = self.parse_poxnora_page(query_request.text)
+        except:
+            raise PoxNoraMaintenanceError
+        return query_soup.find(text=self.username) is not None
 
 
 class StoreableDataFrame(object):
@@ -392,13 +407,15 @@ class KeepData(StoreableDataFrame):
         todo_index = []
         todo_keep = []
         todo_type = []
+        new_df = pd.DataFrame()
         for index, row in rarity_list.iterrows():
             todo_index.append(row['baseId'])
             todo_keep.append(self.get_default_keep(row['rarity']))
             todo_type.append(row['runetype'])
-        self.df['baseId'] = todo_index
-        self.df['keep'] = todo_keep
-        self.df['runetype'] = todo_type
+        new_df['baseId'] = todo_index
+        new_df['keep'] = todo_keep
+        new_df['runetype'] = todo_type
+        self.df = new_df
         self.store()
 
     def refresh(self):
@@ -453,14 +470,15 @@ class PoxNoraData(StoreableDataFrame):
     def update(self, session_manager, raw_data):
         # update this GlobalData from raw_data
         raw_data_frame = pd.DataFrame.from_dict(raw_data[constants.DICT_TYPE_VERBOSE[self.runetype]])
-        self.df[self.data_columns] = raw_data_frame[self.data_columns]
-        self.df['runetype'] = self.runetype
+        new_df = pd.DataFrame()
+        new_df[self.data_columns] = raw_data_frame[self.data_columns]
+        new_df['runetype'] = self.runetype
 
-        if not self.personal:
-            total = len(raw_data.index)
+        if self.personal is constants.PERSONAL_GLOBAL:
+            total = len(raw_data_frame.index)
             my_in = []
             my_out = []
-            for index, row in raw_data.iterrows():
+            for index, row in raw_data_frame.iterrows():
                 try:
                     sys.stdout.write(
                         constants.NOTIF_FETCHING_RUNE.format(constants.DICT_TYPE_VERBOSE[self.runetype], index + 1,
@@ -472,8 +490,10 @@ class PoxNoraData(StoreableDataFrame):
                 my_in.append(this_in)
                 my_out.append(this_out)
             sys.stdout.write('\n')
-            self.df['in'] = my_in
-            self.df['out'] = my_out
+            new_df['in'] = my_in
+            new_df['out'] = my_out
+        self.df = new_df
+        self.store()
 
     def __init__(self, name, file_name, personal, runetype):
         super(PoxNoraData, self).__init__(name=name, file_name=file_name)

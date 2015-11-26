@@ -403,15 +403,16 @@ class KeepData(StoreableDataFrame):
             raise RunesmithNoKeepValueDefined(constants.ERROR_RUNESMITH_KEEP_VALUE_NOT_DEFINED.format(baseid, runetype))
         return filtered.loc[filtered_row, 'keep']
 
-    def populate(self, rarity_list):
+    def populate(self, global_dataframe):
         todo_index = []
         todo_keep = []
         todo_type = []
         new_df = pd.DataFrame()
-        for index, row in rarity_list.iterrows():
-            todo_index.append(row['baseId'])
-            todo_keep.append(self.get_default_keep(row['rarity']))
-            todo_type.append(row['runetype'])
+        for runetype in constants.LIST_TYPES:
+            for index, row in global_dataframe[runetype].df.iterrows():
+                todo_index.append(row['baseId'])
+                todo_keep.append(self.get_default_keep(row['rarity']))
+                todo_type.append(row['runetype'])
         new_df['baseId'] = todo_index
         new_df['keep'] = todo_keep
         new_df['runetype'] = todo_type
